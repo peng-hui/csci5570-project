@@ -61,11 +61,13 @@ static u64 mem_limit = MEM_LIMIT;     /* Memory limit (MB)                 */
 
 static s32 shm_id;                    /* ID of the SHM region              */
 
-static u8  quiet_mode,                /* Hide non-essential messages?      */
+static u8  quiet_mode = 1,                /* Hide non-essential messages?      */
            edges_only,                /* Ignore hit counts?                */
            cmin_mode,                 /* Generate output in afl-cmin mode? */
            binary_mode,               /* Write output as a binary map      */
-           keep_cores;                /* Allow coredumps?                  */
+           keep_cores,                /* Allow coredumps?                  */
+           show_all,
+           show_non_total_max;
 
 static volatile u8
            stop_soon,                 /* Ctrl-C pressed?                   */
@@ -156,73 +158,6 @@ static void setup_shm(void) {
   trace_bits = shmat(shm_id, NULL, 0);
   
   if (!trace_bits) PFATAL("shmat() failed");
-
-}
-
-/* Write results. */
-
-static u32 write_results(void) {
-
-  s32 fd;
-  u32 i, ret = 0;
-
-  u8  cco = !!getenv("AFL_CMIN_CRASHES_ONLY"),
-      caa = !!getenv("AFL_CMIN_ALLOW_ANY");
-
-  if (!strncmp(out_file, "/dev/", 5)) {
-
-    fd = open(out_file, O_WRONLY, 0600);
-    if (fd < 0) PFATAL("Unable to open '%s'", out_file);
-
-  } else if (!strcmp(out_file, "-")) {
-
-    fd = dup(1);
-    if (fd < 0) PFATAL("Unable to open stdout");
-
-  } else {
-
-    unlink(out_file); /* Ignore errors */
-    fd = open(out_file, O_WRONLY | O_CREAT | O_EXCL, 0600);
-    if (fd < 0) PFATAL("Unable to create '%s'", out_file);
-
-  }
-
-
-  if (binary_mode) {
-
-    for (i = 0; i < MAP_SIZE; i++)
-      if (trace_bits[i]) ret++;
-    
-    ck_write(fd, trace_bits, MAP_SIZE, out_file);
-    close(fd);
-
-  } else {
-
-    FILE* f = fdopen(fd, "w");
-
-    if (!f) PFATAL("fdopen() failed");
-
-    for (i = 0; i < MAP_SIZE; i++) {
-
-      if (!trace_bits[i]) continue;
-      ret++;
-
-      if (cmin_mode) {
-
-        if (child_timed_out) break;
-        if (!caa && child_crashed != cco) break;
-
-        fprintf(f, "%u%u\n", trace_bits[i], i);
-
-      } else fprintf(f, "%06u:%u\n", i, trace_bits[i]);
-
-    }
-  
-    fclose(f);
-
-  }
-
-  return ret;
 
 }
 
@@ -487,7 +422,9 @@ static void usage(u8* argv0) {
 
        "  -q            - sink program's output and don't show messages\n"
        "  -e            - show edge coverage only, ignore hit counts\n"
-       "  -c            - allow core dumps\n\n"
+       "  -c            - allow core dumps\n"
+       "  -a            - show all per branches \n"
+       "  -x            - show the maximum over the branches (except the first)\n\n"
 
        "This tool displays raw tuple data captured by AFL instrumentation.\n"
        "For additional help, consult %s/README.\n\n" cRST,
@@ -619,6 +556,10 @@ static char** get_qemu_argv(u8* own_loc, char** argv, int argc) {
 
 int main(int argc, char** argv) {
 
+  #ifndef PERF_SIZE
+  FATAL("afl-showmax should only be used for performance fuzzing mode. Try afl-showmap instead.");
+  #endif
+
   s32 opt;
   u8  mem_limit_given = 0, timeout_given = 0, qemu_mode = 0;
   u32 tcnt;
@@ -626,9 +567,17 @@ int main(int argc, char** argv) {
 
   doc_path = access(DOC_PATH, F_OK) ? "docs" : DOC_PATH;
 
-  while ((opt = getopt(argc,argv,"+o:m:t:A:eqZQbc")) > 0)
+  while ((opt = getopt(argc,argv,"+axo:m:t:A:eqZQbc")) > 0)
 
     switch (opt) {
+
+      case 'x':
+         show_non_total_max = 1;
+         break;
+      
+      case 'a':
+         show_all = 1;
+         break;
 
       case 'o':
 
@@ -743,7 +692,7 @@ int main(int argc, char** argv) {
 
     }
 
-  if (optind == argc || !out_file) usage(argv[0]);
+  if (optind == argc) usage(argv[0]);
 
   setup_shm();
   setup_signal_handlers();
@@ -766,7 +715,32 @@ int main(int argc, char** argv) {
 
   run_target(use_argv);
 
-  tcnt = write_results();
+  u32 * perf_bits = (u32 *) (trace_bits + MAP_SIZE);
+
+  if (show_all ){
+    for (int i = 1; i < PERF_SIZE; i++){
+      if (perf_bits[i]) printf("%d %u\n",i, perf_bits[i]);
+    }
+  } 
+  else if (show_non_total_max) {
+    u32 max = 0;
+    for (int i = 1; i < PERF_SIZE; i++){
+      if (perf_bits[i] > max)
+        max = perf_bits[i];
+    }
+    printf("%u\n", max);
+  } 
+  else {
+    printf("%u\n", perf_bits[0]);
+    u64 sum = 0;
+    for (int i = 1; i < PERF_SIZE; i++){
+    //if (perf_bits[i]) printf("%u\n",perf_bits[i]);
+      sum += perf_bits[i];}
+      if (sum != perf_bits[0]) {
+      OKF("Not equal: %u != %llu" cRST, perf_bits[0], sum);
+    }
+  }
+
 
   if (!quiet_mode) {
 

@@ -52,7 +52,16 @@
 u8  __afl_area_initial[MAP_SIZE];
 u8* __afl_area_ptr = __afl_area_initial;
 
+
+/* Similarly we have a map for performance counters */
+u32  __afl_perf_initial[PERF_SIZE];
+u32* __afl_perf_ptr = __afl_perf_initial;
+
+/* These are saved previous location IDs and strings */
 __thread u32 __afl_prev_loc;
+__thread u8* __afl_prev_loc_desc;
+
+static FILE* loc_logging_file = NULL;
 
 
 /* Running in persistent mode? */
@@ -85,6 +94,16 @@ static void __afl_map_shm(void) {
 
     __afl_area_ptr[0] = 1;
 
+
+    /* Set perf pointer to be just after the trace bits map */
+    __afl_perf_ptr = (u32 *) &__afl_area_ptr[MAP_SIZE];
+
+  }
+
+  /* Maybe enable logging */
+  char* loc_logging_file_name = getenv("AFL_LOG_LOC");
+  if (loc_logging_file_name) {
+    loc_logging_file = fopen(loc_logging_file_name, "a");    
   }
 
 }
@@ -188,6 +207,7 @@ int __afl_persistent_loop(unsigned int max_cnt) {
     if (is_persistent) {
 
       memset(__afl_area_ptr, 0, MAP_SIZE);
+      memset(__afl_perf_ptr, 0, PERF_SIZE * sizeof(u32));
       __afl_area_ptr[0] = 1;
       __afl_prev_loc = 0;
     }
@@ -303,4 +323,13 @@ void __sanitizer_cov_trace_pc_guard_init(uint32_t* start, uint32_t* stop) {
 
   }
 
+}
+
+
+/* Optionally log source locations */
+void __afl_log_loc(char* prev_loc, char* cur_loc) {
+    if (loc_logging_file) {
+        fprintf(loc_logging_file, "BRANCH %s-->%s\n", prev_loc, cur_loc);
+
+    }
 }

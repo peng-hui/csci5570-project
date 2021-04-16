@@ -8,7 +8,7 @@
 ## AFL-based Fuzzing
 
 ## Outputs
-- [Project proposal](doc/proposal/p.pdf).
+- [Project proposal](doc/proposal/p.pdf)
 - [Research report](doc/report/p.pdf)
 - [Demo video]()
 

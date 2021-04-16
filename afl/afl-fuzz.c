@@ -45,6 +45,9 @@
 #include <termios.h>
 #include <dlfcn.h>
 #include <sched.h>
+#include <stdarg.h>
+#include <limits.h>
+#include <math.h>
 
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -75,6 +78,10 @@
 #else
 #  define EXP_ST static
 #endif /* ^AFL_LIB */
+
+/* Staleness adjustment. when an input hits a branch with maximum staleness,
+   skip it with probability STALENESS_CONST/100 */
+#define STALENESS_CONST 80
 
 /* Lots of globals, but mostly for the status UI and other things where it
    really makes no sense to haul them around as function parameters. */
@@ -121,6 +128,10 @@ EXP_ST u8  skip_deterministic,        /* Skip deterministic stages?       */
            skip_requested,            /* Skip request, via SIGUSR1        */
            run_over10m,               /* Run time over 10 minutes?        */
            persistent_mode,           /* Running in persistent mode?      */
+           max_ct_fuzzing,            /* Fuzz for maximum counts          */
+           prioritize_less_stale,     /* prioritize by staleness          */
+           complex_stale,             /* use a fancy staleness formula    */
+           zero_other_counts,         /* zero out all perf counts but 1st */
            deferred_mode,             /* Deferred forkserver mode?        */
            fast_cal;                  /* Try to calibrate faster?         */
 
@@ -135,6 +146,10 @@ static s32 forksrv_pid,               /* PID of the fork server           */
            out_dir_fd = -1;           /* FD of the lock file              */
 
 EXP_ST u8* trace_bits;                /* SHM with instrumentation bitmap  */
+
+EXP_ST u32* perf_bits;                /* PERF - SHM with 2nd (perf) map   */
+EXP_ST u32 max_counts[PERF_SIZE];     /* PERF - keeps track of max value  */
+EXP_ST u32 staleness[PERF_SIZE];      /* PERF - the staleness max values */
 
 EXP_ST u8  virgin_bits[MAP_SIZE],     /* Regions yet untouched by fuzzing */
            virgin_tmout[MAP_SIZE],    /* Bits we haven't seen in tmouts   */
@@ -179,6 +194,7 @@ EXP_ST u64 total_crashes,             /* Total number of crashes          */
            queue_cycle,               /* Queue round counter              */
            cycles_wo_finds,           /* Cycles without any new paths     */
            trim_execs,                /* Execs done to trim input files   */
+           max_file_len = MAX_FILE,   /* Maximum length of input file     */
            bytes_trim_in,             /* Bytes coming into the trimmer    */
            bytes_trim_out,            /* Bytes coming outa the trimmer    */
            blocks_eff_total,          /* Blocks subject to effector maps  */
@@ -218,7 +234,7 @@ static s32 cpu_core_count;            /* CPU core count                   */
 #ifdef HAVE_AFFINITY
 
 static s32 cpu_aff = -1;       	      /* Selected CPU core                */
-
+static s32 cpu_a = -1;       	      /* Selected CPU core                */
 #endif /* HAVE_AFFINITY */
 
 static FILE* plot_file;               /* Gnuplot output file              */
@@ -238,7 +254,8 @@ struct queue_entry {
       fs_redundant;                   /* Marked as redundant in the fs?   */
 
   u32 bitmap_size,                    /* Number of bits set in bitmap     */
-      exec_cksum;                     /* Checksum of the execution trace  */
+      exec_cksum,                     /* Checksum of the execution trace  */
+      perf_cksum;                   /* PERF - cksum of unbukceted trace */
 
   u64 exec_us,                        /* Execution time (us)              */
       handicap,                       /* Number of queue cycles behind    */
@@ -257,8 +274,7 @@ static struct queue_entry *queue,     /* Fuzzing queue (linked list)      */
                           *queue_top, /* Top of the list                  */
                           *q_prev100; /* Previous 100 marker              */
 
-static struct queue_entry*
-  top_rated[MAP_SIZE];                /* Top entries for bitmap bytes     */
+static struct queue_entry** top_rated;/* Top entries for bitmap bytes     */
 
 struct extra_data {
   u8* data;                           /* Dictionary token data            */
@@ -299,7 +315,8 @@ enum {
   /* 13 */ STAGE_EXTRAS_UI,
   /* 14 */ STAGE_EXTRAS_AO,
   /* 15 */ STAGE_HAVOC,
-  /* 16 */ STAGE_SPLICE
+  /* 16 */ STAGE_SPLICE,
+  /* 17 */ STAGE_TREE
 };
 
 /* Stage value types */
@@ -320,6 +337,23 @@ enum {
   /* 04 */ FAULT_NOINST,
   /* 05 */ FAULT_NOBITS
 };
+
+void DEBUG (char const *fmt, ...) {
+    static FILE *f = NULL;
+    if (f == NULL) {
+      u8 * fn = alloc_printf("%s/max-ct-fuzzing.log", out_dir);
+      f= fopen(fn, "w");
+      ck_free(fn);
+    }
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(f, fmt, ap);
+    va_end(ap);
+}
+//tree
+int parse(u8* target,size_t len,u8* second,size_t lenS);
+void fuzz(int index, char** ret, size_t* retlen);
+//end of tree
 
 
 /* Get unix time in milliseconds */
@@ -492,7 +526,7 @@ static void bind_to_free_cpu(void) {
   }
 
   OKF("Found a free CPU core, binding to #%u.", i);
-
+  if(cpu_a!=-1)i=cpu_a;	
   cpu_aff = i;
 
   CPU_ZERO(&c);
@@ -945,6 +979,26 @@ static inline u8 has_new_bits(u8* virgin_map) {
 }
 
 
+/* whether the trace_bits attain some new maximum value for 
+   some i. updates max_counts with max counts.
+   */
+static inline u8 has_new_max() {
+
+  int ret = 0;
+  for (int i = 0; i < PERF_SIZE; i++){
+      if (unlikely(perf_bits[i])){
+        if (unlikely(perf_bits[i] > max_counts[i])) {
+           ret = 1;
+           DEBUG("New max(0x%04x) = %u (earlier was: %u)\n ", i, perf_bits[i], max_counts[i]);
+	   max_counts[i] = perf_bits[i];
+        }
+      }
+  }
+  
+  return ret;
+
+}
+
 /* Count the number of bits set in the provided bitmap. Used for the status
    screen several times every second, does not have to be fast. */
 
@@ -1231,49 +1285,78 @@ static void minimize_bits(u8* dst, u8* src) {
 
    The first step of the process is to maintain a list of top_rated[] entries
    for every byte in the bitmap. We win that slot if there is no previous
-   contender, or if the contender has a more favorable speed x size factor. */
+   contender, or if the contender has a more favorable speed x size factor. 
+
+   In the case of performance fuzzing, we win if we maximize the count at some
+   key with a non-zero value.   */
 
 static void update_bitmap_score(struct queue_entry* q) {
 
   u32 i;
-  u64 fav_factor = q->exec_us * q->len;
 
-  /* For every byte set in trace_bits[], see if there is a previous winner,
+  /* For every byte set in trace(or perf)_bits[], see if there is a previous winner,
      and how it compares to us. */
 
-  for (i = 0; i < MAP_SIZE; i++)
+  if (max_ct_fuzzing){
 
-    if (trace_bits[i]) {
+   /* in the case of max fuzzing, just win if we achieve the max */ 
+   for (i = 0; i < PERF_SIZE; i++)
 
-       if (top_rated[i]) {
-
-         /* Faster-executing or smaller test cases are favored. */
-
-         if (fav_factor > top_rated[i]->exec_us * top_rated[i]->len) continue;
-
-         /* Looks like we're going to win. Decrease ref count for the
-            previous winner, discard its trace_bits[] if necessary. */
-
-         if (!--top_rated[i]->tc_ref) {
-           ck_free(top_rated[i]->trace_mini);
-           top_rated[i]->trace_mini = 0;
+      if (perf_bits[i]) {
+         
+         if (top_rated[i]) {
+           if (perf_bits[i] < max_counts[i]) continue;
          }
 
+         /* Insert ourselves as the new winner. */
+         top_rated[i] = q;
+
+        /* if we get here, we know that perf_bits[i] == max_counts[i] */
+         score_changed = 1;
+
        }
 
-       /* Insert ourselves as the new winner. */
+  } else {
 
-       top_rated[i] = q;
-       q->tc_ref++;
+    u64 fav_factor = q->exec_us * q->len;
 
-       if (!q->trace_mini) {
-         q->trace_mini = ck_alloc(MAP_SIZE >> 3);
-         minimize_bits(q->trace_mini, trace_bits);
+    for (i = 0; i < MAP_SIZE; i++)
+
+      if (unlikely(trace_bits[i])) {
+         
+         if (top_rated[i]) {
+
+           /* Faster-executing or smaller test cases are favored. */
+
+           if (fav_factor > top_rated[i]->exec_us * top_rated[i]->len) continue;
+
+           /* Looks like we're going to win. Decrease ref count for the
+              previous winner, discard its trace_bits[] if necessary. */
+
+           if (!--top_rated[i]->tc_ref) {
+             ck_free(top_rated[i]->trace_mini);
+             top_rated[i]->trace_mini = 0;
+           }
+
+         }
+
+        /* Insert ourselves as the new winner. */
+        top_rated[i] = q;
+
+        /* change scores accordingly */
+
+        q->tc_ref++;
+
+        if (!q->trace_mini) {
+          q->trace_mini = ck_alloc(MAP_SIZE >> 3);
+          minimize_bits(q->trace_mini, trace_bits);
+         }
+        score_changed = 1;
+
        }
 
-       score_changed = 1;
+  }
 
-     }
 
 }
 
@@ -1282,19 +1365,18 @@ static void update_bitmap_score(struct queue_entry* q) {
    goes over top_rated[] entries, and then sequentially grabs winners for
    previously-unseen bytes (temp_v) and marks them as favored, at least
    until the next run. The favored entries are given more air time during
-   all fuzzing steps. */
+   all fuzzing steps. 
+   In the max_ct_fuzzing setting we only favor entries which achieve the max.*/
 
 static void cull_queue(void) {
 
   struct queue_entry* q;
-  static u8 temp_v[MAP_SIZE >> 3];
+  
   u32 i;
 
   if (dumb_mode || !score_changed) return;
 
   score_changed = 0;
-
-  memset(temp_v, 255, MAP_SIZE >> 3);
 
   queued_favored  = 0;
   pending_favored = 0;
@@ -1306,26 +1388,62 @@ static void cull_queue(void) {
     q = q->next;
   }
 
-  /* Let's see if anything in the bitmap isn't captured in temp_v.
-     If yes, and if it has a top_rated[] contender, let's use it. */
+  if (max_ct_fuzzing) {
 
-  for (i = 0; i < MAP_SIZE; i++)
-    if (top_rated[i] && (temp_v[i >> 3] & (1 << (i & 7)))) {
+    for (i = 0; i < PERF_SIZE; i++) {
 
-      u32 j = MAP_SIZE >> 3;
+      if (top_rated[i]) {
 
-      /* Remove all bits belonging to the current entry from temp_v. */
+        /* if top rated for any i, will be favored */
+        u8 was_favored_already = top_rated[i]->favored;
 
-      while (j--) 
-        if (top_rated[i]->trace_mini[j])
-          temp_v[j] &= ~top_rated[i]->trace_mini[j];
+        top_rated[i]->favored = 1;
 
-      top_rated[i]->favored = 1;
-      queued_favored++;
+        /* increments counts only if not also favored for another i */
+        if (!was_favored_already){
+          queued_favored++;
+          if (!top_rated[i]->was_fuzzed) pending_favored++;
+        }
 
-      if (!top_rated[i]->was_fuzzed) pending_favored++;
+      }
 
     }
+
+  } else {
+
+    /* uncovered by favored elements bytes */
+    static u8 temp_v[MAP_SIZE >> 3];
+    memset(temp_v, 255, MAP_SIZE >> 3);
+
+    for (i = 0; i < MAP_SIZE; i++) {
+
+      if (top_rated[i]) {
+
+        if ((temp_v[i >> 3] & (1 << (i & 7)))) {
+          /* Let's see if anything in the bitmap isn't captured in temp_v.
+          If yes, and if it has a top_rated[] contender, let's use it. */
+
+          u32 j = MAP_SIZE >> 3;
+
+          /* Remove all bits belonging to the current entry from temp_v. */
+
+          while (j--) 
+            if (top_rated[i]->trace_mini[j])
+              temp_v[j] &= ~top_rated[i]->trace_mini[j];
+
+          top_rated[i]->favored = 1;
+          
+          queued_favored++;
+
+          if (!top_rated[i]->was_fuzzed) pending_favored++;
+
+        }
+
+      }
+
+    }
+
+  }
 
   q = queue;
 
@@ -1348,7 +1466,11 @@ EXP_ST void setup_shm(void) {
   memset(virgin_tmout, 255, MAP_SIZE);
   memset(virgin_crash, 255, MAP_SIZE);
 
-  shm_id = shmget(IPC_PRIVATE, MAP_SIZE, IPC_CREAT | IPC_EXCL | 0600);
+  /* in the case of the max count fuzzing, allocate the performance
+    map right after the regular bitmap.  */
+  /* always allocate so that programs instrumented with afl-clang-fast
+     don't cause segfaults */
+  shm_id = shmget(IPC_PRIVATE, MAP_SIZE + (PERF_SIZE * sizeof(u32)), IPC_CREAT | IPC_EXCL | 0600);
 
   if (shm_id < 0) PFATAL("shmget() failed");
 
@@ -1366,9 +1488,16 @@ EXP_ST void setup_shm(void) {
   ck_free(shm_str);
 
   trace_bits = shmat(shm_id, NULL, 0);
+  // setup perf bits if needes
+  if (max_ct_fuzzing) perf_bits = (u32 *) (trace_bits + MAP_SIZE);
   
   if (!trace_bits) PFATAL("shmat() failed");
 
+}
+
+/* set the max counts map to 0 */
+EXP_ST void setup_max_counts() {
+  memset(max_counts, 0, PERF_SIZE * sizeof(u32));
 }
 
 
@@ -1467,9 +1596,9 @@ static void read_testcases(void) {
 
     }
 
-    if (st.st_size > MAX_FILE) 
+    if (st.st_size > max_file_len) 
       FATAL("Test case '%s' is too big (%s, limit is %s)", fn,
-            DMS(st.st_size), DMS(MAX_FILE));
+            DMS(st.st_size), DMS(max_file_len));
 
     /* Check for metadata that indicates that deterministic fuzzing
        is complete for this entry. We don't want to repeat deterministic
@@ -1998,7 +2127,7 @@ EXP_ST void init_forkserver(char** argv) {
     if (!getrlimit(RLIMIT_NOFILE, &r) && r.rlim_cur < FORKSRV_FD + 2) {
 
       r.rlim_cur = FORKSRV_FD + 2;
-      setrlimit(RLIMIT_NOFILE, &r); /* Ignore errors */
+      //setrlimit(RLIMIT_NOFILE, &r); /* Ignore errors */
 
     }
 
@@ -2008,7 +2137,7 @@ EXP_ST void init_forkserver(char** argv) {
 
 #ifdef RLIMIT_AS
 
-      setrlimit(RLIMIT_AS, &r); /* Ignore errors */
+      //setrlimit(RLIMIT_AS, &r); /* Ignore errors */
 
 #else
 
@@ -2016,7 +2145,7 @@ EXP_ST void init_forkserver(char** argv) {
          according to reliable sources, RLIMIT_DATA covers anonymous
          maps - so we should be getting good protection against OOM bugs. */
 
-      setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
+      //setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
 
 #endif /* ^RLIMIT_AS */
 
@@ -2028,7 +2157,7 @@ EXP_ST void init_forkserver(char** argv) {
 
     r.rlim_max = r.rlim_cur = 0;
 
-    setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
+    //setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
 
     /* Isolate the process and configure standard descriptors. If out_file is
        specified, stdin is /dev/null; otherwise, out_fd is cloned instead. */
@@ -2273,6 +2402,7 @@ static u8 run_target(char** argv, u32 timeout) {
      territory. */
 
   memset(trace_bits, 0, MAP_SIZE);
+  if (max_ct_fuzzing) memset(perf_bits, 0, PERF_SIZE * sizeof(u32));
   MEM_BARRIER();
 
   /* If we're running in "dumb" mode, we can't rely on the fork server
@@ -2296,11 +2426,11 @@ static u8 run_target(char** argv, u32 timeout) {
 
 #ifdef RLIMIT_AS
 
-        setrlimit(RLIMIT_AS, &r); /* Ignore errors */
+        //setrlimit(RLIMIT_AS, &r); /* Ignore errors */
 
 #else
 
-        setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
+        //setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
 
 #endif /* ^RLIMIT_AS */
 
@@ -2308,7 +2438,7 @@ static u8 run_target(char** argv, u32 timeout) {
 
       r.rlim_max = r.rlim_cur = 0;
 
-      setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
+      //setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
 
       /* Isolate the process and configure standard descriptors. If out_file is
          specified, stdin is /dev/null; otherwise, out_fd is cloned instead. */
@@ -2424,12 +2554,15 @@ static u8 run_target(char** argv, u32 timeout) {
   MEM_BARRIER();
 
   tb4 = *(u32*)trace_bits;
-
+  /* this should only bucket the MAP_SIZE part of shmem */
 #ifdef __x86_64__
   classify_counts((u64*)trace_bits);
 #else
   classify_counts((u32*)trace_bits);
 #endif /* ^__x86_64__ */
+  if (max_ct_fuzzing && zero_other_counts) {
+    memset(trace_bits + MAP_SIZE + sizeof(u32), 0, sizeof(u32)*(PERF_SIZE -1));
+  }
 
   prev_timed_out = child_timed_out;
 
@@ -2459,7 +2592,6 @@ static u8 run_target(char** argv, u32 timeout) {
   return FAULT_NONE;
 
 }
-
 
 /* Write modified data to file for testing. If out_file is set, the old file
    is unlinked and a new one is created. Otherwise, out_fd is rewound and
@@ -2530,6 +2662,7 @@ static void show_stats(void);
 
 static u8 calibrate_case(char** argv, struct queue_entry* q, u8* use_mem,
                          u32 handicap, u8 from_queue) {
+  // TODO in calibration look at the entire trace bits... booo
 
   static u8 first_trace[MAP_SIZE];
 
@@ -2612,6 +2745,10 @@ static u8 calibrate_case(char** argv, struct queue_entry* q, u8* use_mem,
       } else {
 
         q->exec_cksum = cksum;
+        /* setup the perf cksum here. Assume it is not variable, or that 
+          variability will be detected in the regular checking */ 
+        if (max_ct_fuzzing) 
+          q->perf_cksum = hash32(perf_bits, PERF_SIZE*sizeof(u32), HASH_CONST); 
         memcpy(first_trace, trace_bits, MAP_SIZE);
 
       }
@@ -2733,7 +2870,11 @@ static void perform_dry_run(char** argv) {
 
       case FAULT_NONE:
 
-        if (q == queue) check_map_coverage();
+
+    	if (q == queue) check_map_coverage();
+
+	// Populates the max_counts properly.
+	if (max_ct_fuzzing) has_new_max();
 
         if (crash_mode) FATAL("Test case '%s' does *NOT* crash", fn);
 
@@ -2892,6 +3033,16 @@ static void perform_dry_run(char** argv) {
   }
 
   OKF("All test cases processed.");
+
+  if (max_ct_fuzzing) {
+  DEBUG("======== Starting Keys ========\n");
+    for (u32 k=0; k < PERF_SIZE; k++){
+      // if there is a non-zero score at this index.. 
+      if (max_counts[k]){
+          DEBUG("At key %d, val is %d\n", k, max_counts[k]);
+      }
+    }
+  }
 
 }
 
@@ -3124,23 +3275,29 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
   if (fault == crash_mode) {
 
     /* Keep only if there are new bits in the map, add to queue for
-       future fuzzing, etc. */
+       future fuzzing, etc. PERF: also keep if there is a new max*/
 
-    if (!(hnb = has_new_bits(virgin_bits))) {
+    u8 hnm = 0;
+    if (max_ct_fuzzing) hnm = has_new_max(); // are there some subtleties here of when the max should be set? TODO
+
+    if (!(hnb = has_new_bits(virgin_bits)) && (!max_ct_fuzzing || !hnm)) {
       if (crash_mode) total_crashes++;
       return 0;
     }    
+   
 
 #ifndef SIMPLE_FILES
 
-    fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, queued_paths,
-                      describe_op(hnb));
+    fn = alloc_printf("%s/queue/id:%06u,%s%s", out_dir, queued_paths,
+                      describe_op(hnb), (max_ct_fuzzing && hnm) ? ",+max" : "" );
 
 #else
 
     fn = alloc_printf("%s/queue/id_%06u", out_dir, queued_paths);
 
 #endif /* ^!SIMPLE_FILES */
+
+    DEBUG("adding %s to queue\n", fn);
 
     add_to_queue(fn, len, 0);
 
@@ -3150,6 +3307,8 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     }
 
     queue_top->exec_cksum = hash32(trace_bits, MAP_SIZE, HASH_CONST);
+    if (max_ct_fuzzing) 
+      queue_top->perf_cksum = hash32(perf_bits, PERF_SIZE*sizeof(u32), HASH_CONST); 
 
     /* Try to calibrate inline; this also calls update_bitmap_score() when
        successful. */
@@ -3868,7 +4027,6 @@ static void check_term_size(void);
    execve() calls, plus in several other circumstances. */
 
 static void show_stats(void) {
-
   static u64 last_stats_ms, last_plot_ms, last_ms, last_execs;
   static double avg_exec;
   double t_byte_ratio, stab_ratio;
@@ -4240,9 +4398,10 @@ static void show_stats(void) {
        "  imported : " cRST "%-10s " bSTG bV "\n", tmp,
        sync_id ? DI(queued_imported) : (u8*)"n/a");
 
-  sprintf(tmp, "%s/%s, %s/%s",
+  sprintf(tmp, "%s/%s, %s/%s , %s/%s",
           DI(stage_finds[STAGE_HAVOC]), DI(stage_cycles[STAGE_HAVOC]),
-          DI(stage_finds[STAGE_SPLICE]), DI(stage_cycles[STAGE_SPLICE]));
+          DI(stage_finds[STAGE_SPLICE]), DI(stage_cycles[STAGE_SPLICE]),
+          DI(stage_finds[STAGE_TREE]), DI(stage_cycles[STAGE_TREE]));
 
   SAYF(bV bSTOP "       havoc : " cRST "%-37s " bSTG bV bSTOP, tmp);
 
@@ -4461,9 +4620,11 @@ static u32 next_p2(u32 val) {
    file size, to keep the stage short and sweet. */
 
 static u8 trim_case(char** argv, struct queue_entry* q, u8* in_buf) {
-
+  return 0;
+  
   static u8 tmp[64];
   static u8 clean_trace[MAP_SIZE];
+  static u32 clean_perf[PERF_SIZE];
 
   u8  needs_write = 0, fault = 0;
   u32 trim_exec = 0;
@@ -4500,7 +4661,8 @@ static u8 trim_case(char** argv, struct queue_entry* q, u8* in_buf) {
     while (remove_pos < q->len) {
 
       u32 trim_avail = MIN(remove_len, q->len - remove_pos);
-      u32 cksum;
+      u32 exec_cksum;
+      u32 perf_cksum;
 
       write_with_gap(in_buf, q->len, remove_pos, trim_avail);
 
@@ -4510,15 +4672,21 @@ static u8 trim_case(char** argv, struct queue_entry* q, u8* in_buf) {
       if (stop_soon || fault == FAULT_ERROR) goto abort_trimming;
 
       /* Note that we don't keep track of crashes or hangs here; maybe TODO? */
+      if (max_ct_fuzzing)
+        perf_cksum = hash32(perf_bits, PERF_SIZE*sizeof(u32), HASH_CONST);
+      exec_cksum = hash32(trace_bits, MAP_SIZE, HASH_CONST);
 
-      cksum = hash32(trace_bits, MAP_SIZE, HASH_CONST);
+        
+
 
       /* If the deletion had no impact on the trace, make it permanent. This
          isn't perfect for variable-path inputs, but we're just making a
          best-effort pass, so it's not a big deal if we end up with false
-         negatives every now and then. */
+         negatives every now and then.  PERF: Make sure that the performance
+         details don't change either. */
 
-      if (cksum == q->exec_cksum) {
+      if ((exec_cksum == q->exec_cksum) && 
+          (!max_ct_fuzzing || (perf_cksum == q->perf_cksum))) {
 
         u32 move_tail = q->len - remove_pos - trim_avail;
 
@@ -4535,6 +4703,7 @@ static u8 trim_case(char** argv, struct queue_entry* q, u8* in_buf) {
 
           needs_write = 1;
           memcpy(clean_trace, trace_bits, MAP_SIZE);
+          if (max_ct_fuzzing) memcpy(clean_perf, perf_bits, PERF_SIZE*sizeof(u32)); 
 
         }
 
@@ -4568,6 +4737,7 @@ static u8 trim_case(char** argv, struct queue_entry* q, u8* in_buf) {
     close(fd);
 
     memcpy(trace_bits, clean_trace, MAP_SIZE);
+    if (max_ct_fuzzing) memcpy(perf_bits, clean_perf, PERF_SIZE*sizeof(u32));
     update_bitmap_score(q);
 
   }
@@ -4646,28 +4816,31 @@ static u32 choose_block_len(u32 limit) {
   switch (UR(rlim)) {
 
     case 0:  min_value = 1;
-             max_value = HAVOC_BLK_SMALL;
+             max_value = max_file_len / 16;
              break;
 
-    case 1:  min_value = HAVOC_BLK_SMALL;
-             max_value = HAVOC_BLK_MEDIUM;
+    case 1:  min_value = max_file_len / 16;
+             max_value = max_file_len / 8;
              break;
 
     default: 
 
              if (UR(10)) {
 
-               min_value = HAVOC_BLK_MEDIUM;
-               max_value = HAVOC_BLK_LARGE;
+               min_value = max_file_len / 8;
+               max_value = max_file_len / 4;
 
              } else {
 
-               min_value = HAVOC_BLK_LARGE;
-               max_value = HAVOC_BLK_XL;
+               min_value = max_file_len / 4;
+               max_value = max_file_len * 3 / 4;
 
              }
 
   }
+
+  if (min_value < 1) min_value = 1;
+  if (max_value < 1) max_value = 1;
 
   if (min_value >= limit) min_value = 1;
 
@@ -4933,6 +5106,75 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 }
 
 
+static u8 too_stale(){
+
+    u8 maxed_by_input[MAP_SIZE];
+    memset(maxed_by_input, 0, MAP_SIZE);
+
+    /* minimum staleness achieved by current input */
+    u32 my_min_staleness = UINT_MAX;
+
+    /* overall min/max staleness */
+    u32 min_staleness = UINT_MAX;
+    /* start the max at 1 to avoid div by 0 */
+    u32 max_staleness = 1;
+
+
+    /* increment staleness and find my min staleness/overall max staleness */
+    for (u32 k=0; k < PERF_SIZE; k++){
+
+      // if there is a non-zero score at this index.. 
+      if (max_counts[k]){
+
+        /* set new overall max or min staleness */
+        max_staleness = (max_staleness < staleness[k]) ? staleness[k] : max_staleness;
+        min_staleness = (min_staleness > staleness[k]) ? staleness[k] : min_staleness;
+
+        // TODO WAT
+        // log the top rated for this one and the staleness
+        if (top_rated[k])
+          DEBUG("There is a top rated at key %d, val is %d, staleness is %d %s\n", k, max_counts[k], staleness[k],
+           (perf_bits[k] == max_counts[k]) ? "(maxed by me)" : "");
+
+        /* increment staleness for any score that this input hits the max of.
+           If score is increased while fuzzing input, staleness will be set to 0  */
+        if (perf_bits[k] == max_counts[k]){
+
+          my_min_staleness = (staleness[k] < my_min_staleness) ? staleness[k] : my_min_staleness;
+          staleness[k]++;
+          maxed_by_input[k] = 1;
+
+        }
+      }
+    }
+
+    u32 staleness_score;
+    if (!complex_stale)
+      staleness_score = 100 - STALENESS_CONST*(my_min_staleness-min_staleness)/max_staleness;
+    else
+      staleness_score = 100 - STALENESS_CONST*(exp(-((double) my_min_staleness-min_staleness)/ sqrt(max_staleness)) +1);
+
+    DEBUG("my_min_stale: %d, min_stale: %d, max_stale: %d, score: %d\n", my_min_staleness, min_staleness, max_staleness, staleness_score);
+
+    if (staleness_score < UR(100)){
+
+      DEBUG("Skipping because too stale (score: %d, min_stale: %d)\n", staleness_score, min_staleness);
+
+      /* decided to skip the input. remove the increments. */
+      for (u32 k=0; k < PERF_SIZE; k++){
+        if (unlikely(maxed_by_input[k])) {
+          staleness[k]--;
+        }
+      }
+     
+      /* too stale. return 1 */
+      return 1;
+     
+     }
+
+    return 0;
+}
+
 /* Take the current entry from the queue, fuzz it for a while. This
    function is a tad too long... returns 0 if fuzzed successfully, 1 if
    skipped or bailed out. */
@@ -4949,6 +5191,9 @@ static u8 fuzz_one(char** argv) {
   u8  a_collect[MAX_AUTO_EXTRA];
   u32 a_len = 0;
 
+  u32 orig_max_counts[PERF_SIZE];
+  memcpy(orig_max_counts, max_counts, PERF_SIZE*sizeof(u32));
+
 #ifdef IGNORE_FINDS
 
   /* In IGNORE_FINDS mode, skip any entries that weren't in the
@@ -4958,13 +5203,16 @@ static u8 fuzz_one(char** argv) {
 
 #else
 
-  if (pending_favored) {
+  if (pending_favored || (max_ct_fuzzing && queued_favored)) {
 
     /* If we have any favored, non-fuzzed new arrivals in the queue,
        possibly skip to them at the expense of already-fuzzed or non-favored
        cases. */
 
-    if ((queue_cur->was_fuzzed || !queue_cur->favored) &&
+    /* in max count fuzzing mode, queue inputs remain favored even if 
+       they were previously fuzzed */
+
+    if (((queue_cur->was_fuzzed  && !max_ct_fuzzing) || !queue_cur->favored) &&
         UR(100) < SKIP_TO_NEW_PROB) return 1;
 
   } else if (!dumb_mode && !queue_cur->favored && queued_paths > 10) {
@@ -4987,6 +5235,9 @@ static u8 fuzz_one(char** argv) {
 
 #endif /* ^IGNORE_FINDS */
 
+  DEBUG("===============Fuzzing test case #%u===============\n",current_entry);
+
+  if (!queue_cur->favored) DEBUG("(Test case is not favored)\n");
   if (not_on_tty) {
     ACTF("Fuzzing test case #%u (%u total, %llu uniq crashes found)...",
          current_entry, queued_paths, unique_crashes);
@@ -5003,7 +5254,7 @@ static u8 fuzz_one(char** argv) {
 
   orig_in = in_buf = mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 
-  if (orig_in == MAP_FAILED) PFATAL("Unable to mmap '%s'", queue_cur->fname);
+  if (orig_in == MAP_FAILED&&len!=0) PFATAL("Unable to mmap '%s'", queue_cur->fname);
 
   close(fd);
 
@@ -5016,6 +5267,25 @@ static u8 fuzz_one(char** argv) {
   subseq_tmouts = 0;
 
   cur_depth = queue_cur->depth;
+
+  /*************
+   * STALENESS *
+   ************/
+
+  /* Computing staleness */
+  if (max_ct_fuzzing && queue_cur->favored && prioritize_less_stale) {
+
+    /* run to populate the perf_bits */
+    write_to_testcase(in_buf, queue_cur->len);
+    run_target(argv, exec_tmout);
+    if (too_stale()) {
+      munmap(orig_in, queue_cur->len);
+      if (in_buf != orig_in) ck_free(in_buf);
+      ck_free(out_buf);
+      return 1; 
+    } 
+
+  }
 
   /*******************************************
    * CALIBRATION (only if failed earlier on) *
@@ -5044,7 +5314,6 @@ static u8 fuzz_one(char** argv) {
   /************
    * TRIMMING *
    ************/
-
   if (!dumb_mode && !queue_cur->trim_done) {
 
     u8 res = trim_case(argv, queue_cur, in_buf);
@@ -5062,10 +5331,9 @@ static u8 fuzz_one(char** argv) {
     queue_cur->trim_done = 1;
 
     if (len != queue_cur->len) len = queue_cur->len;
-
   }
-
   memcpy(out_buf, in_buf, len);
+
 
   /*********************
    * PERFORMANCE SCORE *
@@ -5078,13 +5346,13 @@ static u8 fuzz_one(char** argv) {
      testing in earlier, resumed runs (passed_det). */
 
   if (skip_deterministic || queue_cur->was_fuzzed || queue_cur->passed_det)
-    goto havoc_stage;
+    goto tree_stage;
 
   /* Skip deterministic fuzzing if exec path checksum puts this out of scope
      for this master instance. */
 
   if (master_max && (queue_cur->exec_cksum % master_max) != master_id - 1)
-    goto havoc_stage;
+    goto tree_stage;
 
   doing_det = 1;
 
@@ -5299,17 +5567,23 @@ static u8 fuzz_one(char** argv) {
 
     if (!eff_map[EFF_APOS(stage_cur)]) {
 
-      u32 cksum;
+      u32 exec_cksum;
+      u32 perf_cksum;
 
       /* If in dumb mode or if the file is very short, just flag everything
          without wasting time on checksums. */
 
-      if (!dumb_mode && len >= EFF_MIN_LEN)
-        cksum = hash32(trace_bits, MAP_SIZE, HASH_CONST);
-      else
-        cksum = ~queue_cur->exec_cksum;
+      if (!dumb_mode && len >= EFF_MIN_LEN){
+        exec_cksum = hash32(trace_bits, MAP_SIZE, HASH_CONST);
+        if (max_ct_fuzzing) 
+          perf_cksum = hash32(perf_bits, PERF_SIZE*sizeof(u32), HASH_CONST);
+      } else {
+        exec_cksum = ~queue_cur->exec_cksum;
+        if (max_ct_fuzzing) 
+          perf_cksum = ~queue_cur->perf_cksum;
+      }
 
-      if (cksum != queue_cur->exec_cksum) {
+      if ((exec_cksum != queue_cur->exec_cksum) || (max_ct_fuzzing && (perf_cksum != queue_cur->perf_cksum))) {
         eff_map[EFF_APOS(stage_cur)] = 1;
         eff_cnt++;
       }
@@ -5676,7 +5950,7 @@ skip_bitflip:
   stage_cycles[STAGE_ARITH32] += stage_max;
 
 skip_arith:
-
+goto skip_interest;
   /**********************
    * INTERESTING VALUES *
    **********************/
@@ -5883,14 +6157,15 @@ skip_interest:
   stage_short = "ext_UO";
   stage_cur   = 0;
   stage_max   = extras_cnt * len;
-
+  int k;
   stage_val_type = STAGE_VAL_NONE;
 
   orig_hit_cnt = new_hit_cnt;
 
-  for (i = 0; i < len; i++) {
+  ex_tmp = ck_alloc(len + MAX_DICT_FILE);
+  u8 cur_byte, next_byte;
 
-    u32 last_len = 0;
+  for (i = 0; i < len;) {
 
     stage_cur_byte = i;
 
@@ -5898,6 +6173,15 @@ skip_interest:
        that we don't have to worry about restoring the buffer in
        between writes at a particular offset determined by the outer
        loop. */
+
+    k=i+1;
+    cur_byte= *(u8*)(out_buf + i);
+    next_byte= *(u8*)(out_buf + k);
+    while(k<len && ( isalpha(cur_byte)||isdigit(cur_byte) )&&( isalpha(next_byte)||isdigit(next_byte) )){
+	   stage_max-=extras_cnt;
+	   k++;
+	   next_byte= *(u8*)(out_buf + k);
+    }
 
     for (j = 0; j < extras_cnt; j++) {
 
@@ -5916,20 +6200,26 @@ skip_interest:
 
       }
 
-      last_len = extras[j].len;
-      memcpy(out_buf + i, extras[j].data, last_len);
+      /* Insert token */
+      memcpy(ex_tmp + i, extras[j].data, extras[j].len);
 
-      if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
+      /* Copy tail */
+      memcpy(ex_tmp + i + extras[j].len, out_buf + k, len -k);
+
+      if (common_fuzz_stuff(argv, ex_tmp, len-k+i + extras[j].len)){
+         ck_free(ex_tmp);
+         goto abandon_entry;
+      }
 
       stage_cur++;
 
     }
 
-    /* Restore all the clobbered memory. */
-    memcpy(out_buf + i, in_buf + i, last_len);
-
+    /* Copy head */
+    memcpy(ex_tmp+i, out_buf+i, k-i);
+    i=k;
   }
-
+  ck_free(ex_tmp);
   new_hit_cnt = queued_paths + unique_crashes;
 
   stage_finds[STAGE_EXTRAS_UO]  += new_hit_cnt - orig_hit_cnt;
@@ -5946,13 +6236,22 @@ skip_interest:
 
   ex_tmp = ck_alloc(len + MAX_DICT_FILE);
 
-  for (i = 0; i <= len; i++) {
+  for (i = 0; i <= len;) {
 
     stage_cur_byte = i;
 
+    k=i+1;
+    cur_byte= *(u8*)(out_buf + i);
+    next_byte= *(u8*)(out_buf + k);
+    while(k<len && ( isalpha(cur_byte)||isdigit(cur_byte) )&&( isalpha(next_byte)||isdigit(next_byte) )){
+	    stage_max-=extras_cnt;
+	    k++;
+	    next_byte= *(u8*)(out_buf + k);
+    }
+
     for (j = 0; j < extras_cnt; j++) {
 
-      if (len + extras[j].len > MAX_FILE) {
+      if (len + extras[j].len > max_file_len) {
         stage_max--; 
         continue;
       }
@@ -5973,8 +6272,8 @@ skip_interest:
     }
 
     /* Copy head */
-    ex_tmp[i] = out_buf[i];
-
+    memcpy(ex_tmp+i, out_buf+i, k-i);
+    i=k;
   }
 
   ck_free(ex_tmp);
@@ -5997,11 +6296,20 @@ skip_user_extras:
 
   orig_hit_cnt = new_hit_cnt;
 
-  for (i = 0; i < len; i++) {
+  ex_tmp = ck_alloc(len + MAX_DICT_FILE);
 
-    u32 last_len = 0;
+  for (i = 0; i < len;) {
 
     stage_cur_byte = i;
+
+    k=i+1;
+    cur_byte= *(u8*)(out_buf + i);
+    next_byte= *(u8*)(out_buf + k);
+    while(k<len && ( isalpha(cur_byte)||isdigit(cur_byte) )&&( isalpha(next_byte)||isdigit(next_byte) )){
+	   stage_max-=MIN(a_extras_cnt, USE_AUTO_EXTRAS);
+	   k++;
+	   next_byte= *(u8*)(out_buf + k);
+    }
 
     for (j = 0; j < MIN(a_extras_cnt, USE_AUTO_EXTRAS); j++) {
 
@@ -6016,17 +6324,25 @@ skip_user_extras:
 
       }
 
-      last_len = a_extras[j].len;
-      memcpy(out_buf + i, a_extras[j].data, last_len);
+      /* Insert token */
+      memcpy(ex_tmp + i, a_extras[j].data, a_extras[j].len);
 
-      if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
+      /* Copy tail */
+      memcpy(ex_tmp + i + a_extras[j].len, out_buf + k, len -k);
+
+      if (common_fuzz_stuff(argv, ex_tmp, len-k+i + a_extras[j].len)) {
+        ck_free(ex_tmp);
+        goto abandon_entry;
+      }
+
 
       stage_cur++;
 
     }
 
     /* Restore all the clobbered memory. */
-    memcpy(out_buf + i, in_buf + i, last_len);
+    memcpy(ex_tmp+i, out_buf+i, k-i);
+    i=k;
 
   }
 
@@ -6043,10 +6359,72 @@ skip_extras:
 
   if (!queue_cur->passed_det) mark_as_det_done(queue_cur);
 
+tree_stage:
+
+  stage_name  = "tree";
+  stage_short = "tree";
+
+  struct queue_entry* target;
+  u32 tid;
+  u8* new_buf;
+
+retry_external_pick:
+  // Pick a random other queue entry for passing to external API 
+  do { tid = UR(queued_paths); } while (tid == current_entry && queued_paths > 1);
+
+  target = queue;
+
+  while (tid >= 100) { target = target->next_100; tid -= 100; }
+  while (tid--) target = target->next;
+
+  //Make sure that the target has a reasonable length.
+
+  while (target && (target->len < 2 || target == queue_cur) && queued_paths > 1) {
+    target = target->next;
+    splicing_with++;
+  }
+  if (!target) goto retry_external_pick;
+
+  // Read the additional testcase into a new buffer.
+  fd = open(target->fname, O_RDONLY);
+  if (fd < 0) PFATAL("Unable to open '%s'", target->fname);
+  new_buf = ck_alloc_nozero(target->len);
+  ck_read(fd, new_buf, target->len, target->fname);
+  close(fd);
+  stage_max=parse(in_buf,len,new_buf,target->len);
+  ck_free(new_buf);
+
+  orig_hit_cnt =  queued_paths + unique_crashes;
+ 
+  for(stage_cur=0;stage_cur<stage_max;stage_cur++){
+     char* retbuf=NULL;
+     size_t retlen=0;
+     fuzz(stage_cur,&retbuf,&retlen);
+     if (retbuf) {
+        if(retlen>0){
+           if (common_fuzz_stuff(argv, retbuf, retlen)) {
+             free(retbuf);
+             goto abandon_entry;
+           }
+        }
+      // Reset retbuf/retlen
+      free(retbuf);
+      retbuf = NULL;
+      retlen = 0;
+    }
+  }
+
+  new_hit_cnt = queued_paths + unique_crashes;
+
+  stage_finds[STAGE_TREE]  += new_hit_cnt - orig_hit_cnt;
+  stage_cycles[STAGE_TREE] += stage_max;
+
   /****************
    * RANDOM HAVOC *
    ****************/
-
+  //ret_val = 0;
+  //goto abandon_entry;
+  
 havoc_stage:
 
   stage_cur_byte = -1;
@@ -6293,56 +6671,52 @@ havoc_stage:
 
           }
 
-        case 13:
+        case 13: {
+          
+          u8  actually_clone = UR(4);
+          u32 clone_from, clone_to, clone_len;
 
-          if (temp_len + HAVOC_BLK_XL < MAX_FILE) {
+          if (actually_clone) {
 
-            /* Clone bytes (75%) or insert a block of constant bytes (25%). */
+            clone_len  = choose_block_len(temp_len);
+            clone_from = UR(temp_len - clone_len + 1);
 
-            u8  actually_clone = UR(4);
-            u32 clone_from, clone_to, clone_len;
-            u8* new_buf;
+          } else {
 
-            if (actually_clone) {
-
-              clone_len  = choose_block_len(temp_len);
-              clone_from = UR(temp_len - clone_len + 1);
-
-            } else {
-
-              clone_len = choose_block_len(HAVOC_BLK_XL);
-              clone_from = 0;
-
-            }
-
-            clone_to   = UR(temp_len);
-
-            new_buf = ck_alloc_nozero(temp_len + clone_len);
-
-            /* Head */
-
-            memcpy(new_buf, out_buf, clone_to);
-
-            /* Inserted part */
-
-            if (actually_clone)
-              memcpy(new_buf + clone_to, out_buf + clone_from, clone_len);
-            else
-              memset(new_buf + clone_to,
-                     UR(2) ? UR(256) : out_buf[UR(temp_len)], clone_len);
-
-            /* Tail */
-            memcpy(new_buf + clone_to + clone_len, out_buf + clone_to,
-                   temp_len - clone_to);
-
-            ck_free(out_buf);
-            out_buf = new_buf;
-            temp_len += clone_len;
+            clone_len = choose_block_len(HAVOC_BLK_XL);
+            clone_from = 0;
 
           }
 
-          break;
+          if (temp_len + clone_len >= max_file_len) break;
 
+          clone_to   = UR(temp_len);
+
+          u8* new_buf;
+          new_buf = ck_alloc_nozero(temp_len + clone_len);
+
+          /* Head */
+
+          memcpy(new_buf, out_buf, clone_to);
+
+          /* Inserted part */
+
+          if (actually_clone)
+            memcpy(new_buf + clone_to, out_buf + clone_from, clone_len);
+          else
+            memset(new_buf + clone_to,
+                   UR(2) ? UR(256) : out_buf[UR(temp_len)], clone_len);
+
+          /* Tail */
+          memcpy(new_buf + clone_to + clone_len, out_buf + clone_to,
+                 temp_len - clone_to);
+
+          ck_free(out_buf);
+          out_buf = new_buf;
+          temp_len += clone_len;
+
+          break;
+        }
         case 14: {
 
             /* Overwrite bytes with a randomly selected chunk (75%) or fixed
@@ -6422,7 +6796,7 @@ havoc_stage:
               use_extra = UR(a_extras_cnt);
               extra_len = a_extras[use_extra].len;
 
-              if (temp_len + extra_len >= MAX_FILE) break;
+              if (temp_len + extra_len >= max_file_len) break;
 
               new_buf = ck_alloc_nozero(temp_len + extra_len);
 
@@ -6437,7 +6811,7 @@ havoc_stage:
               use_extra = UR(extras_cnt);
               extra_len = extras[use_extra].len;
 
-              if (temp_len + extra_len >= MAX_FILE) break;
+              if (temp_len + extra_len >= max_file_len) break;
 
               new_buf = ck_alloc_nozero(temp_len + extra_len);
 
@@ -6606,6 +6980,17 @@ abandon_entry:
     queue_cur->was_fuzzed = 1;
     pending_not_fuzzed--;
     if (queue_cur->favored) pending_favored--;
+  } 
+
+  /* update staleness accordingly */
+  if (max_ct_fuzzing && prioritize_less_stale) {
+
+    for (s32 k=0; k < PERF_SIZE; k++)
+      if (max_counts[k] > orig_max_counts[k]){
+        DEBUG("key %d is not stale\n", k);
+        staleness[k] = 0;
+      }
+
   }
 
   munmap(orig_in, queue_cur->len);
@@ -6714,7 +7099,7 @@ static void sync_fuzzers(char** argv) {
 
       /* Ignore zero-sized or oversized files. */
 
-      if (st.st_size && st.st_size <= MAX_FILE) {
+      if (st.st_size && st.st_size <= max_file_len) {
 
         u8  fault;
         u8* mem = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -7060,7 +7445,10 @@ static void usage(u8* argv0) {
 
        "  -d            - quick & dirty mode (skips deterministic steps)\n"
        "  -n            - fuzz without instrumentation (dumb mode)\n"
-       "  -x dir        - optional fuzzer dictionary (see README)\n\n"
+       "  -x dir        - optional fuzzer dictionary (see README)\n"
+       "  -p            - fuzz with max count settings\n"
+       "  -s            - prioritize inputs with lower staleness (requires p)\n"
+       "  -N size       - max input size to be generated, in bytes\n\n"
 
        "Other stuff:\n\n"
 
@@ -7704,6 +8092,18 @@ static void save_cmdline(u32 argc, char** argv) {
 /* Main entry point */
 
 int main(int argc, char** argv) {
+	const rlim_t kStackSize=64L*1024L*1024L;
+	struct rlimit rl;
+	int result=getrlimit(RLIMIT_STACK,&rl);
+	if(result==0){
+		if(rl.rlim_cur<kStackSize){
+			rl.rlim_cur=kStackSize;
+			result=setrlimit(RLIMIT_STACK,&rl);
+			if(result!=0){
+				FATAL("setrlimit returned result != 0.\n");
+			}
+		}
+	}
 
   s32 opt;
   u64 prev_queued = 0;
@@ -7723,9 +8123,33 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
-  while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:Q")) > 0)
+  while ((opt = getopt(argc, argv, "+zspN:chi:o:a:f:m:t:T:dnCB:S:M:x:Q")) > 0)
 
     switch (opt) {
+
+      case 'p':
+        SAYF("Max count fuzzing...\n");
+        max_ct_fuzzing = 1;
+        break;
+      
+      case 's':
+        SAYF("Prioritizing less stale inputs...\n");
+        prioritize_less_stale = 1;
+        break;
+
+      case 'c':
+        SAYF("Complex staleness...\n");
+        complex_stale = 1;
+        break; 
+
+     case 'N':
+        if (sscanf(optarg, "%llu", &max_file_len) != 1) FATAL("-N argument should be a positive integer");
+        break;
+
+      case 'z':
+        SAYF("Zeroing all feedback except sum. EXPERIMENTAL\n");
+        zero_other_counts = 1;
+        break;
 
       case 'i': /* input dir */
 
@@ -7740,6 +8164,11 @@ int main(int argc, char** argv) {
 
         if (out_dir) FATAL("Multiple -o options not supported");
         out_dir = optarg;
+        break;
+
+      case 'a': /* cpu */
+
+        if (sscanf(optarg,"%d",&cpu_a)<1) FATAL("Bad syntax for -a");
         break;
 
       case 'M': { /* master sync ID */
@@ -7953,7 +8382,13 @@ int main(int argc, char** argv) {
 
   setup_post();
   setup_shm();
+  if (max_ct_fuzzing) setup_max_counts();
+  if (max_ct_fuzzing)
+    top_rated= ck_alloc(PERF_SIZE * sizeof(struct queue_entry *));
+  else
+    top_rated = ck_alloc(MAP_SIZE * sizeof(struct queue_entry *));
   init_count_class16();
+
 
   setup_dirs_fds();
   read_testcases();
@@ -8083,6 +8518,7 @@ stop_fuzzing:
   fclose(plot_file);
   destroy_queue();
   destroy_extras();
+  ck_free(top_rated);
   ck_free(target_path);
   ck_free(sync_id);
 

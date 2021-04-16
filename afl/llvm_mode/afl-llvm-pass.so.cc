@@ -37,6 +37,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/IR/DebugInfo.h"
 
 using namespace llvm;
 
@@ -59,6 +60,17 @@ namespace {
 
 }
 
+static inline std::string loc_description (const DebugLoc& dd) {
+  if(!dd) { return "?"; }
+  auto* scope = cast<DIScope>(dd.getScope());
+  return scope->getFilename().str() + ":" + std::to_string(dd.getLine()) + ":" + std::to_string(dd.getCol());
+}
+
+static inline std::string bb_description(const BasicBlock& bb) {
+  return "(" + loc_description(bb.getInstList().begin()->getDebugLoc()) + "-" + loc_description(bb.getTerminator()->getDebugLoc()) + ")";
+
+}
+
 
 char AFLCoverage::ID = 0;
 
@@ -69,6 +81,8 @@ bool AFLCoverage::runOnModule(Module &M) {
 
   IntegerType *Int8Ty  = IntegerType::getInt8Ty(C);
   IntegerType *Int32Ty = IntegerType::getInt32Ty(C);
+  PointerType *CharPtrTy = PointerType::getUnqual(Int8Ty);
+  Type *VoidTy = Type::getVoidTy(C);
 
   /* Show a banner */
 
@@ -99,10 +113,25 @@ bool AFLCoverage::runOnModule(Module &M) {
   GlobalVariable *AFLMapPtr =
       new GlobalVariable(M, PointerType::get(Int8Ty, 0), false,
                          GlobalValue::ExternalLinkage, 0, "__afl_area_ptr");
+  
+  GlobalVariable *AFLPerfPtr =
+      new GlobalVariable(M, PointerType::get(Int32Ty, 0), false,
+                         GlobalValue::ExternalLinkage, 0, "__afl_perf_ptr");
 
   GlobalVariable *AFLPrevLoc = new GlobalVariable(
       M, Int32Ty, false, GlobalValue::ExternalLinkage, 0, "__afl_prev_loc",
       0, GlobalVariable::GeneralDynamicTLSModel, 0, false);
+
+  GlobalVariable *AFLPrevLocDesc = new GlobalVariable(
+      M, CharPtrTy, false, GlobalValue::ExternalLinkage, 0, "__afl_prev_loc_desc",
+      0, GlobalVariable::GeneralDynamicTLSModel, 0, false);
+
+  ConstantInt* PerfMask = ConstantInt::get(Int32Ty, PERF_SIZE-1);
+
+  Function* LogLocationsFunc = Function::Create(FunctionType::get(VoidTy, 
+      ArrayRef<Type*>({CharPtrTy, CharPtrTy}), true), GlobalVariable::ExternalLinkage,
+      "__afl_log_loc", &M);
+  
 
   /* Instrument all the things! */
 
@@ -121,6 +150,10 @@ bool AFLCoverage::runOnModule(Module &M) {
       unsigned int cur_loc = AFL_R(MAP_SIZE);
 
       ConstantInt *CurLoc = ConstantInt::get(Int32Ty, cur_loc);
+      
+      /* Get current source location information */
+      std::string cur_loc_desc = bb_description(BB);
+      Value* CurLocDesc = IRB.CreateGlobalStringPtr(cur_loc_desc);
 
       /* Load prev_loc */
 
@@ -128,12 +161,20 @@ bool AFLCoverage::runOnModule(Module &M) {
       PrevLoc->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
       Value *PrevLocCasted = IRB.CreateZExt(PrevLoc, IRB.getInt32Ty());
 
+      /* Get edge ID as XOR */
+      Value* EdgeId = IRB.CreateXor(PrevLocCasted, CurLoc);
+
       /* Load SHM pointer */
 
       LoadInst *MapPtr = IRB.CreateLoad(AFLMapPtr);
       MapPtr->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
       Value *MapPtrIdx =
-          IRB.CreateGEP(MapPtr, IRB.CreateXor(PrevLocCasted, CurLoc));
+          IRB.CreateGEP(MapPtr, EdgeId);
+      
+      LoadInst *PerfPtr = IRB.CreateLoad(AFLPerfPtr);
+      PerfPtr->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
+      Value *PerfBranchPtr =
+          IRB.CreateGEP(PerfPtr, IRB.CreateAnd(EdgeId, PerfMask));
 
       /* Update bitmap */
 
@@ -142,12 +183,35 @@ bool AFLCoverage::runOnModule(Module &M) {
       Value *Incr = IRB.CreateAdd(Counter, ConstantInt::get(Int8Ty, 1));
       IRB.CreateStore(Incr, MapPtrIdx)
           ->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
+      
+      /* Increment performance counter for branch */
+      LoadInst *PerfBranchCounter = IRB.CreateLoad(PerfBranchPtr);
+      PerfBranchCounter->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
+      Value *PerfBranchIncr = IRB.CreateAdd(PerfBranchCounter, ConstantInt::get(Int32Ty, 1));
+      IRB.CreateStore(PerfBranchIncr, PerfBranchPtr)
+          ->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
+      
+      /* Increment performance counter for total count  */
+      LoadInst *PerfTotalCounter = IRB.CreateLoad(PerfPtr); // Index 0 of the perf map
+      PerfTotalCounter->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
+      Value *PerfTotalIncr = IRB.CreateAdd(PerfTotalCounter, ConstantInt::get(Int32Ty, 1));
+      IRB.CreateStore(PerfTotalIncr, PerfPtr)
+          ->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
 
       /* Set prev_loc to cur_loc >> 1 */
 
       StoreInst *Store =
           IRB.CreateStore(ConstantInt::get(Int32Ty, cur_loc >> 1), AFLPrevLoc);
       Store->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
+
+      /* Possibly log location */
+      LoadInst* PrevLocDesc = IRB.CreateLoad(AFLPrevLocDesc);
+      IRB.CreateCall(LogLocationsFunc, ArrayRef<Value*>({ PrevLocDesc, CurLocDesc }));
+      
+
+      /* Set prev_loc_desc to cur_loc_desc */
+      IRB.CreateStore(CurLocDesc, AFLPrevLocDesc);
+
 
       inst_blocks++;
 
@@ -179,7 +243,7 @@ static void registerAFLPass(const PassManagerBuilder &,
 
 
 static RegisterStandardPasses RegisterAFLPass(
-    PassManagerBuilder::EP_OptimizerLast, registerAFLPass);
+    PassManagerBuilder::EP_ModuleOptimizerEarly, registerAFLPass);
 
 static RegisterStandardPasses RegisterAFLPass0(
     PassManagerBuilder::EP_EnabledOnOptLevel0, registerAFLPass);
