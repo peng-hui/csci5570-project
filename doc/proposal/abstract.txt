@@ -1,0 +1,10 @@
+Network systems connect the Internet world.  Bugs in network systems can
+lead to denial-of-service, performance issues, etc.  Understanding
+network system bugs can benefit both the system developers and security
+analysts.
+
+However, to the best of our knowledge, the bugs in network systems have
+not been well understood.  The potential security impact has not been
+well investigated as well.  In this project, we aim to understand the
+bugs in network systems.  We hope to learn lessons to further guide
+future bug detection in network systems.

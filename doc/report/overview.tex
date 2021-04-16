@@ -1,0 +1,53 @@
+\section{Network System Bugs}
+
+Network systems are the hardware and software components from which these networks are built \cite{serpanos2011architecture}.
+They are commonly applied to perform data analytics, e-commerce, storage back, \etc{} \cite{gill2011understanding}.
+The network architectures have been involved rapidly along with the advance of new network applications, \eg{} video applications and video streaming.
+
+Bugs commonly exist in network systems.
+For example, more than 200 bugs were found in the Linux IP stack \cite{bugzilla}.
+Such bugs can cause severe security and reliability problems like crashes, denial-of-service, and failures \cite{gill2011understanding}.
+
+Understanding the root causes of the bugs in network systems is important.
+In particular,
+first, the empirical knowledge can benefit system developers to avoid making similar mistakes.
+Second, security analysts are thus possible to design new approaches to identifying bugs.
+The network systems thus can be more secure and reliable.
+The user experience can be significantly improved as well \cite{user-exp}.
+
+\section{Related Work and Research Problems}
+There are substantial works on characterizing different types of bugs in many systems  (\eg{} regular-expression denial-of-service bugs in web applications \cite{perfbugstudy, nistor2013toddler,nistor2015caramel}, performance bugs in C/C++ compilers \cite{sun2016toward, yang2011finding}).
+Such studies greatly advance the improvement of security analysis and bug detection techniques.
+For example, Yang \etal{}, guided by their empirical study, developed a rule-based static system to effectively and scalably detect new bugs in C/C++ compilers.
+
+Toward understanding bugs in network systems, Yin \etal{} studied the bugs in open-sourced router software \cite{yin2010towards}.
+They concluded the many bugs could lead to reliability issues and were hard to patch.
+Gill \etc{} investigated bugs in data center networks and demonstrated that the load balancers were highly buggy \cite{gill2011understanding}.
+However, to the best of our knowledge, these works either fall short of characterizing the root causes of the bugs or have not included newer network software.
+Furthermore, how such knowledge can benefit the security analysis has not been demonstrated yet.
+
+In this project, we plan to conduct a comprehensive study on existing bugs in several network systems.
+Specifically, we aim to answer the following research questions:
+\begin{itemize}
+\item What are the main categories of the bugs?
+\item What are the main factors that cause bugs?
+\item How widespread are the bugs in network systems?
+\item How severe are the bugs in network systems?
+\end{itemize}
+
+Second, we hope to summarize the general patterns of the bugs in network systems and the common practices in patching network system bugs.
+
+Note that, 
+there is no guarantee that we are able to design a better tool to detect network system bugs or not as this largely depends on what we find in the empirical study, which is unknown for now.
+We do not promise we will be able to identify new bugs within this project.
+Nevertheless, the empirical knowledge on network system bugs can definitely benefit the community to develop more secure and reliable network systems.
+
+
+\section{Logistics}
+Regarding the time of \emph{6 weeks} for this project, we plan to use \emph{3 weeks} on understanding existing bugs in network systems; 
+we then spend \emph{2 weeks} on summarizing the bugs and implement necessary tools (if available) for more practical bug detection;
+last, we use \emph{1 week} to present our findings in the final reports.
+The time schedule is tentative and might change accordingly.
+
+As required, we currently host the project content on a GitHub page\footnote{https://peng-hui.github.io/csci5570-project.html}.
+We also create on a GitHub repository\footnote{https://github.com/peng-hui/csci5570-project} and will maintain the necessary project artifact (\eg{} source code (if any), dataset) there.

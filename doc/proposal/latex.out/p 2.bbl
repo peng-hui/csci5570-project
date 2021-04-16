@@ -1,0 +1,553 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{43}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{}, \showDOI{}, and \showURL{}.  The latter two
+%%% do not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showDOI}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showDOI #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showDOI      \undefined \def \showDOI       #1{#1}\fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+
+\bibitem[\protect\citeauthoryear{Alhuzali, Eshete, Gjomemo, and
+  Venkatakrishnan}{Alhuzali et~al\mbox{.}}{2016}]%
+        {chainsaw}
+\bibfield{author}{\bibinfo{person}{Abeer Alhuzali}, \bibinfo{person}{Birhanu
+  Eshete}, \bibinfo{person}{Rigel Gjomemo}, {and} \bibinfo{person}{VN
+  Venkatakrishnan}.} \bibinfo{year}{2016}\natexlab{}.
+\newblock \showarticletitle{Chainsaw: Chained automated workflow-based exploit
+  generation}. In \bibinfo{booktitle}{\emph{Proceedings of the 23rd ACM
+  Conference on Computer and Communications Security (CCS)}}.
+  \bibinfo{address}{Vienna, Austria}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Alhuzali, Gjomemo, Eshete, and
+  Venkatakrishnan}{Alhuzali et~al\mbox{.}}{2018}]%
+        {navex}
+\bibfield{author}{\bibinfo{person}{Abeer Alhuzali}, \bibinfo{person}{Rigel
+  Gjomemo}, \bibinfo{person}{Birhanu Eshete}, {and} \bibinfo{person}{VN
+  Venkatakrishnan}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{NAVEX: Precise and Scalable Exploit Generation for
+  Dynamic Web Applications}. In \bibinfo{booktitle}{\emph{Proceedings of the
+  27th USENIX Security Symposium (Security)}}. \bibinfo{address}{Baltimore,
+  MD}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Artzi, Kiezun, Dolby, Tip, Dig, Paradkar, and
+  Ernst}{Artzi et~al\mbox{.}}{2008}]%
+        {artzi:finding}
+\bibfield{author}{\bibinfo{person}{Shay Artzi}, \bibinfo{person}{Adam Kiezun},
+  \bibinfo{person}{Julian Dolby}, \bibinfo{person}{Frank Tip},
+  \bibinfo{person}{Danny Dig}, \bibinfo{person}{Amit Paradkar}, {and}
+  \bibinfo{person}{Michael~D Ernst}.} \bibinfo{year}{2008}\natexlab{}.
+\newblock \showarticletitle{Finding bugs in dynamic web applications}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 17th International Symposium on
+  Software Testing and Analysis (ISSTA)}}. \bibinfo{address}{Seattle, WA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Backes, Rieck, Skoruppa, Stock, and
+  Yamaguchi}{Backes et~al\mbox{.}}{2017}]%
+        {phpjoern}
+\bibfield{author}{\bibinfo{person}{Michael Backes}, \bibinfo{person}{Konrad
+  Rieck}, \bibinfo{person}{Malte Skoruppa}, \bibinfo{person}{Ben Stock}, {and}
+  \bibinfo{person}{Fabian Yamaguchi}.} \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{Efficient and flexible discovery of php application
+  vulnerabilities}. In \bibinfo{booktitle}{\emph{Proceedings of the 2nd IEEE
+  Symposium on Security and Privacy (Oakland)}}. \bibinfo{address}{Paris,
+  France}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Baldoni, Coppa, D'Elia, Demetrescu, and
+  Finocchi}{Baldoni et~al\mbox{.}}{2018a}]%
+        {SurveySymExec}
+\bibfield{author}{\bibinfo{person}{Roberto Baldoni}, \bibinfo{person}{Emilio
+  Coppa}, \bibinfo{person}{Daniele~Cono D'Elia}, \bibinfo{person}{Camil
+  Demetrescu}, {and} \bibinfo{person}{Irene Finocchi}.}
+  \bibinfo{year}{2018}\natexlab{a}.
+\newblock \showarticletitle{A Survey of Symbolic Execution Techniques}.
+\newblock \bibinfo{journal}{\emph{ACM Comput. Surv.}} (\bibinfo{year}{2018}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Baldoni, Coppa, D’elia, Demetrescu, and
+  Finocchi}{Baldoni et~al\mbox{.}}{2018b}]%
+        {baldoni2018survey}
+\bibfield{author}{\bibinfo{person}{Roberto Baldoni}, \bibinfo{person}{Emilio
+  Coppa}, \bibinfo{person}{Daniele~Cono D’elia}, \bibinfo{person}{Camil
+  Demetrescu}, {and} \bibinfo{person}{Irene Finocchi}.}
+  \bibinfo{year}{2018}\natexlab{b}.
+\newblock \showarticletitle{A survey of symbolic execution techniques}.
+\newblock \bibinfo{journal}{\emph{ACM Computing Surveys (CSUR)}}
+  (\bibinfo{year}{2018}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Barrett, Stump, Tinelli,
+  et~al\mbox{.}}{Barrett et~al\mbox{.}}{2010}]%
+        {barrett2010smt}
+\bibfield{author}{\bibinfo{person}{Clark Barrett}, \bibinfo{person}{Aaron
+  Stump}, \bibinfo{person}{Cesare Tinelli}, {et~al\mbox{.}}}
+  \bibinfo{year}{2010}\natexlab{}.
+\newblock \showarticletitle{The smt-lib standard: Version 2.0}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 8th international workshop on
+  satisfiability modulo theories (Edinburgh, England)}}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Bruttomesso, Cimatti, Franz{\'e}n, Griggio,
+  Santuari, and Sebastiani}{Bruttomesso et~al\mbox{.}}{2006}]%
+        {bruttomesso2006ackermann}
+\bibfield{author}{\bibinfo{person}{Roberto Bruttomesso},
+  \bibinfo{person}{Alessandro Cimatti}, \bibinfo{person}{Anders Franz{\'e}n},
+  \bibinfo{person}{Alberto Griggio}, \bibinfo{person}{Alessandro Santuari},
+  {and} \bibinfo{person}{Roberto Sebastiani}.} \bibinfo{year}{2006}\natexlab{}.
+\newblock \showarticletitle{To Ackermann-ize or Not to Ackermann-ize? On
+  Efficiently Handling Uninterpreted Function Symbols in SMT}. In
+  \bibinfo{booktitle}{\emph{International Conference on Logic for Programming
+  Artificial Intelligence and Reasoning}}. Springer.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Busse, Nowack, and Cadar}{Busse
+  et~al\mbox{.}}{2020}]%
+        {busse2020running}
+\bibfield{author}{\bibinfo{person}{Frank Busse}, \bibinfo{person}{Martin
+  Nowack}, {and} \bibinfo{person}{Cristian Cadar}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Running symbolic execution forever}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 29th International Symposium on
+  Software Testing and Analysis (ISSTA)}}. \bibinfo{address}{Los Angeles, US}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Cadar, Dunbar, Engler, et~al\mbox{.}}{Cadar
+  et~al\mbox{.}}{2008a}]%
+        {klee}
+\bibfield{author}{\bibinfo{person}{Cristian Cadar}, \bibinfo{person}{Daniel
+  Dunbar}, \bibinfo{person}{Dawson~R Engler}, {et~al\mbox{.}}}
+  \bibinfo{year}{2008}\natexlab{a}.
+\newblock \showarticletitle{KLEE: Unassisted and Automatic Generation of
+  High-Coverage Tests for Complex Systems Programs.}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 8th USENIX Symposium on
+  Operating Systems Design and Implementation (OSDI)}}. \bibinfo{address}{San
+  Diego, CA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Cadar, Ganesh, Pawlowski, Dill, and
+  Engler}{Cadar et~al\mbox{.}}{2008b}]%
+        {cadar2008exe}
+\bibfield{author}{\bibinfo{person}{Cristian Cadar}, \bibinfo{person}{Vijay
+  Ganesh}, \bibinfo{person}{Peter~M Pawlowski}, \bibinfo{person}{David~L Dill},
+  {and} \bibinfo{person}{Dawson~R Engler}.} \bibinfo{year}{2008}\natexlab{b}.
+\newblock \showarticletitle{EXE: automatically generating inputs of death}.
+\newblock \bibinfo{journal}{\emph{ACM Transactions on Information and System
+  Security}} (\bibinfo{year}{2008}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Cadar and Sen}{Cadar and Sen}{2013}]%
+        {cadar:symbolic}
+\bibfield{author}{\bibinfo{person}{Cristian Cadar} {and}
+  \bibinfo{person}{Koushik Sen}.} \bibinfo{year}{2013}\natexlab{}.
+\newblock \showarticletitle{Symbolic execution for software testing: three
+  decades later}.
+\newblock \bibinfo{journal}{\emph{Commun. ACM}} (\bibinfo{year}{2013}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Chen, He, Akhawe, D'Silva, Mittal, and
+  Song}{Chen et~al\mbox{.}}{2015}]%
+        {chen2015aspire}
+\bibfield{author}{\bibinfo{person}{Kevin Chen}, \bibinfo{person}{Warren He},
+  \bibinfo{person}{Devdatta Akhawe}, \bibinfo{person}{Vijay D'Silva},
+  \bibinfo{person}{Prateek Mittal}, {and} \bibinfo{person}{Dawn Song}.}
+  \bibinfo{year}{2015}\natexlab{}.
+\newblock \showarticletitle{ASPIRE: Iterative Specification Synthesis for
+  Security}. In \bibinfo{booktitle}{\emph{15th USENIX Workshop on Hot Topics in
+  Operating Systems (HotOS) (HotOS XV)}}. \bibinfo{address}{Kartause Ittingen,
+  Switzerland}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Chipounov, Kuznetsov, and Candea}{Chipounov
+  et~al\mbox{.}}{2011}]%
+        {s2e}
+\bibfield{author}{\bibinfo{person}{Vitaly Chipounov},
+  \bibinfo{person}{Volodymyr Kuznetsov}, {and} \bibinfo{person}{George
+  Candea}.} \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{S2E: A Platform for in-Vivo Multi-Path Analysis of
+  Software Systems}.
+\newblock \bibinfo{journal}{\emph{SIGPLAN Not.}} (\bibinfo{date}{March}
+  \bibinfo{year}{2011}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Dahse and Holz}{Dahse and Holz}{2014}]%
+        {rips}
+\bibfield{author}{\bibinfo{person}{Johannes Dahse} {and}
+  \bibinfo{person}{Thorsten Holz}.} \bibinfo{year}{2014}\natexlab{}.
+\newblock \showarticletitle{Simulation of Built-in PHP Features for Precise
+  Static Code Analysis.}. In \bibinfo{booktitle}{\emph{Proceedings of the 2014
+  Annual Network and Distributed System Security Symposium (NDSS)}}.
+  \bibinfo{address}{San Diego, CA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Dams}{Dams}{2018}]%
+        {popularphp100}
+\bibfield{author}{\bibinfo{person}{Dams}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \bibinfo{title}{{Top 100 PHP functions}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://www.exakat.io/top-100-php-functions/}.}
+
+
+\bibitem[\protect\citeauthoryear{De~Moura and Bj{\o}rner}{De~Moura and
+  Bj{\o}rner}{2008}]%
+        {z3solver}
+\bibfield{author}{\bibinfo{person}{Leonardo De~Moura} {and}
+  \bibinfo{person}{Nikolaj Bj{\o}rner}.} \bibinfo{year}{2008}\natexlab{}.
+\newblock \showarticletitle{Z3: An efficient SMT solver}. In
+  \bibinfo{booktitle}{\emph{International conference on Tools and Algorithms
+  for the Construction and Analysis of Systems}}. \bibinfo{address}{Budapest,
+  Hungary}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{de~Moura, Dutertre, and Shankar}{de~Moura
+  et~al\mbox{.}}{2007}]%
+        {de2007tutorial}
+\bibfield{author}{\bibinfo{person}{Leonardo de Moura}, \bibinfo{person}{Bruno
+  Dutertre}, {and} \bibinfo{person}{Natarajan Shankar}.}
+  \bibinfo{year}{2007}\natexlab{}.
+\newblock \showarticletitle{A tutorial on satisfiability modulo theories}. In
+  \bibinfo{booktitle}{\emph{International Conference on Computer Aided
+  Verification}}. \bibinfo{address}{Berlin, Germany}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Fr{\"a}nzle, Herde, Teige, Ratschan, and
+  Schubert}{Fr{\"a}nzle et~al\mbox{.}}{2006}]%
+        {franzle2006efficient}
+\bibfield{author}{\bibinfo{person}{Martin Fr{\"a}nzle},
+  \bibinfo{person}{Christian Herde}, \bibinfo{person}{Tino Teige},
+  \bibinfo{person}{Stefan Ratschan}, {and} \bibinfo{person}{Tobias Schubert}.}
+  \bibinfo{year}{2006}\natexlab{}.
+\newblock \showarticletitle{Efficient solving of large non-linear arithmetic
+  constraint systems with complex boolean structure}.
+\newblock \bibinfo{journal}{\emph{Journal on Satisfiability, Boolean Modeling
+  and Computation}} (\bibinfo{year}{2006}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Fu and Qian}{Fu and Qian}{2008}]%
+        {fu:safeli}
+\bibfield{author}{\bibinfo{person}{Xiang Fu} {and} \bibinfo{person}{Kai Qian}.}
+  \bibinfo{year}{2008}\natexlab{}.
+\newblock \showarticletitle{SAFELI: SQL injection scanner using symbolic
+  execution}. In \bibinfo{booktitle}{\emph{Proceedings of the 2008 workshop on
+  Testing, analysis, and verification of web services and applications}}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Godefroid}{Godefroid}{2007}]%
+        {godefroid:compositional}
+\bibfield{author}{\bibinfo{person}{Patrice Godefroid}.}
+  \bibinfo{year}{2007}\natexlab{}.
+\newblock \showarticletitle{Compositional dynamic test generation}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 34th ACM Symposium on Principles
+  of Programming Languages (POPL)}}. \bibinfo{address}{Nice, France}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Godefroid}{Godefroid}{2011}]%
+        {godefroid:higher}
+\bibfield{author}{\bibinfo{person}{Patrice Godefroid}.}
+  \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{Higher-order test generation}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 32nd ACM SIGPLAN Conference on
+  Programming Language Design and Implementation (PLDI)}}.
+  \bibinfo{address}{San Jose, CA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{HHVM}{HHVM}{2018}]%
+        {hhvm-stop-php}
+\bibfield{author}{\bibinfo{person}{HHVM}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \bibinfo{title}{{Ending PHP Support, and The Future Of Hack}}.
+\newblock
+  \bibinfo{howpublished}{\url{https://hhvm.com/blog/2018/09/12/end-of-php-support-future-of-hack.html}}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Holler, Herzig, and Zeller}{Holler
+  et~al\mbox{.}}{2012}]%
+        {holler2012fuzzing}
+\bibfield{author}{\bibinfo{person}{Christian Holler}, \bibinfo{person}{Kim
+  Herzig}, {and} \bibinfo{person}{Andreas Zeller}.}
+  \bibinfo{year}{2012}\natexlab{}.
+\newblock \showarticletitle{Fuzzing with code fragments}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 21st USENIX Security Symposium
+  (Security)}}. \bibinfo{address}{Bellevue, WA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Jovanovic, Kruegel, and Kirda}{Jovanovic
+  et~al\mbox{.}}{2010}]%
+        {jovanovic:static}
+\bibfield{author}{\bibinfo{person}{Nenad Jovanovic},
+  \bibinfo{person}{Christopher Kruegel}, {and} \bibinfo{person}{Engin Kirda}.}
+  \bibinfo{year}{2010}\natexlab{}.
+\newblock \showarticletitle{Static analysis for detecting taint-style
+  vulnerabilities in web applications}.
+\newblock \bibinfo{journal}{\emph{Journal of Computer Security}}
+  (\bibinfo{year}{2010}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Kuznetsov, Kinder, Bucur, and
+  Candea}{Kuznetsov et~al\mbox{.}}{2012}]%
+        {kuznetsov:efficient}
+\bibfield{author}{\bibinfo{person}{Volodymyr Kuznetsov},
+  \bibinfo{person}{Johannes Kinder}, \bibinfo{person}{Stefan Bucur}, {and}
+  \bibinfo{person}{George Candea}.} \bibinfo{year}{2012}\natexlab{}.
+\newblock \showarticletitle{Efficient state merging in symbolic execution}.
+\newblock \bibinfo{journal}{\emph{Acm Sigplan Notices}} (\bibinfo{year}{2012}).
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Liu, Li, Prajapati, and Wu}{Liu
+  et~al\mbox{.}}{2019}]%
+        {liu2019deepfuzz}
+\bibfield{author}{\bibinfo{person}{Xiao Liu}, \bibinfo{person}{Xiaoting Li},
+  \bibinfo{person}{Rupesh Prajapati}, {and} \bibinfo{person}{Dinghao Wu}.}
+  \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{Deepfuzz: Automatic generation of syntax valid c
+  programs for fuzz testing}. In \bibinfo{booktitle}{\emph{Proceedings of the
+  AAAI Conference on Artificial Intelligence}}. \bibinfo{pages}{1044--1051}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Nikic}{Nikic}{2020}]%
+        {phpparser}
+\bibfield{author}{\bibinfo{person}{Nikic}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{title}{{A PHP parser written in PHP}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://github.com/nikic/PHP-Parser}.}
+
+
+\bibitem[\protect\citeauthoryear{Olivo, Dillig, and Lin}{Olivo
+  et~al\mbox{.}}{2015}]%
+        {seconddos}
+\bibfield{author}{\bibinfo{person}{Oswaldo Olivo}, \bibinfo{person}{Isil
+  Dillig}, {and} \bibinfo{person}{Calvin Lin}.}
+  \bibinfo{year}{2015}\natexlab{}.
+\newblock \showarticletitle{Detecting and exploiting second order
+  denial-of-service vulnerabilities in web applications}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 22nd ACM Conference on Computer
+  and Communications Security (CCS)}}. \bibinfo{address}{Denver, Colorado}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Ottoni}{Ottoni}{2018}]%
+        {ottoni:hhvm}
+\bibfield{author}{\bibinfo{person}{Guilherme Ottoni}.}
+  \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{HHVM JIT: A Profile-guided, Region-based Compiler
+  for PHP and Hack}. In \bibinfo{booktitle}{\emph{Proceedings of the 39th ACM
+  SIGPLAN Conference on Programming Language Design and Implementation
+  (PLDI)}}. \bibinfo{address}{Philadelphia, PA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Park, Xu, Yun, Jang, and Kim}{Park
+  et~al\mbox{.}}{2020}]%
+        {park2020fuzzing}
+\bibfield{author}{\bibinfo{person}{Soyeon Park}, \bibinfo{person}{Wen Xu},
+  \bibinfo{person}{Insu Yun}, \bibinfo{person}{Daehee Jang}, {and}
+  \bibinfo{person}{Taesoo Kim}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Fuzzing JavaScript Engines with Aspect-preserving
+  Mutation}. In \bibinfo{booktitle}{\emph{Proceedings of the 41st IEEE
+  Symposium on Security and Privacy (Oakland)}}. \bibinfo{address}{San
+  Francisco, CA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{P{\u{a}}s{\u{a}}reanu, Rungta, and
+  Visser}{P{\u{a}}s{\u{a}}reanu et~al\mbox{.}}{2011}]%
+        {puasuareanu:symbolic}
+\bibfield{author}{\bibinfo{person}{Corina~S P{\u{a}}s{\u{a}}reanu},
+  \bibinfo{person}{Neha Rungta}, {and} \bibinfo{person}{Willem Visser}.}
+  \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{Symbolic execution with mixed concrete-symbolic
+  solving}. In \bibinfo{booktitle}{\emph{Proceedings of the 20th International
+  Symposium on Software Testing and Analysis (ISSTA)}}.
+  \bibinfo{address}{Toronto, Canada}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Robinson and Wos}{Robinson and Wos}{1983}]%
+        {robinson:paramodulation}
+\bibfield{author}{\bibinfo{person}{G Robinson} {and} \bibinfo{person}{Lawrence
+  Wos}.} \bibinfo{year}{1983}\natexlab{}.
+\newblock \showarticletitle{Paramodulation and theorem-proving in first-order
+  theories with equality}.
+\newblock In \bibinfo{booktitle}{\emph{Automation of Reasoning}}.
+  \bibinfo{publisher}{Springer}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Saxena, Akhawe, Hanna, Mao, McCamant, and
+  Song}{Saxena et~al\mbox{.}}{2010}]%
+        {saxena:symbolic}
+\bibfield{author}{\bibinfo{person}{Prateek Saxena}, \bibinfo{person}{Devdatta
+  Akhawe}, \bibinfo{person}{Steve Hanna}, \bibinfo{person}{Feng Mao},
+  \bibinfo{person}{Stephen McCamant}, {and} \bibinfo{person}{Dawn Song}.}
+  \bibinfo{year}{2010}\natexlab{}.
+\newblock \showarticletitle{A symbolic execution framework for javascript}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 31th IEEE Symposium on Security
+  and Privacy (Oakland)}}. \bibinfo{address}{Oakland, CA}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Services}{Services}{2019}]%
+        {cyberattack}
+\bibfield{author}{\bibinfo{person}{AAG~IT Services}.}
+  \bibinfo{year}{2019}\natexlab{}.
+\newblock \bibinfo{title}{{How often do Cyber Attacks occur?}}
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://aag-it.com/how-often-do-cyber-attacks-occur/}.}
+
+
+\bibitem[\protect\citeauthoryear{SMT-LIB}{SMT-LIB}{2020}]%
+        {smt-lib}
+\bibfield{author}{\bibinfo{person}{SMT-LIB}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{title}{{SMT-LIB}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{http://smtlib.cs.uiowa.edu/}.}
+
+
+\bibitem[\protect\citeauthoryear{Technologies}{Technologies}{2019}]%
+        {webvul}
+\bibfield{author}{\bibinfo{person}{Positive Technologies}.}
+  \bibinfo{year}{2019}\natexlab{}.
+\newblock \bibinfo{title}{{Web application vulnerabilities: statistics for
+  2018}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://www.ptsecurity.com/ww-en/analytics/web-application-vulnerabilities-statistics-2019/}.}
+
+
+\bibitem[\protect\citeauthoryear{W3Techs}{W3Techs}{2020}]%
+        {phpshare}
+\bibfield{author}{\bibinfo{person}{W3Techs}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{title}{{Usage statistics of PHP for websites}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://w3techs.com/technologies/details/pl-php}.}
+
+
+\bibitem[\protect\citeauthoryear{Wei, Chen, Feng, Ferles, and Dillig}{Wei
+  et~al\mbox{.}}{2018}]%
+        {wei2018singularity}
+\bibfield{author}{\bibinfo{person}{Jiayi Wei}, \bibinfo{person}{Jia Chen},
+  \bibinfo{person}{Yu Feng}, \bibinfo{person}{Kostas Ferles}, {and}
+  \bibinfo{person}{Isil Dillig}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Singularity: Pattern fuzzing for worst case
+  complexity}. In \bibinfo{booktitle}{\emph{Proceedings of the 26th ACM Joint
+  European Software Engineering Conference and Symposium on the Foundations of
+  Software Engineering (ESEC/FSE)}}. \bibinfo{address}{Lake Buena Vista, FL}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Wekipedia}{Wekipedia}{2020}]%
+        {SMT-wiki}
+\bibfield{author}{\bibinfo{person}{Wekipedia}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{title}{{Satisfiability modulo theories}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://en.wikipedia.org/wiki/Satisfiability_modulo_theories}.}
+
+
+\bibitem[\protect\citeauthoryear{Wikipedia}{Wikipedia}{2020}]%
+        {zendengine}
+\bibfield{author}{\bibinfo{person}{Wikipedia}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \bibinfo{title}{{Zend Engine}}.
+\newblock
+\newblock
+\newblock
+\shownote{\url{https://en.wikipedia.org/wiki/Zend_Engine}.}
+
+
+\bibitem[\protect\citeauthoryear{Winterer, Zhang, and Su}{Winterer
+  et~al\mbox{.}}{2020}]%
+        {yinyang}
+\bibfield{author}{\bibinfo{person}{Dominik Winterer}, \bibinfo{person}{Chengyu
+  Zhang}, {and} \bibinfo{person}{Zhendong Su}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Validating SMT solvers via semantic fusion.}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 41st ACM SIGPLAN Conference on
+  Programming Language Design and Implementation (PLDI)}}.
+  \bibinfo{address}{London, UK}.
+\newblock
+
+
+\bibitem[\protect\citeauthoryear{Yamaguchi, Golde, Arp, and Rieck}{Yamaguchi
+  et~al\mbox{.}}{2014}]%
+        {yamaguchi:modeling}
+\bibfield{author}{\bibinfo{person}{Fabian Yamaguchi}, \bibinfo{person}{Nico
+  Golde}, \bibinfo{person}{Daniel Arp}, {and} \bibinfo{person}{Konrad Rieck}.}
+  \bibinfo{year}{2014}\natexlab{}.
+\newblock \showarticletitle{Modeling and discovering vulnerabilities with code
+  property graphs}. In \bibinfo{booktitle}{\emph{Proceedings of the 35th IEEE
+  Symposium on Security and Privacy (Oakland)}}. \bibinfo{address}{San Jose,
+  CA}.
+\newblock
+
+
+\end{thebibliography}

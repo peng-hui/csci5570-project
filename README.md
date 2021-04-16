@@ -1,11 +1,18 @@
-# Understanding and Detecting Bugs in Network Systems
-Course project of CSCI5570, Spring 2021
+# Understanding and Detecting Bugs in Network Systems (Course project of CSCI5570, Spring 2021)
+## Overview
 
-## Project Proposal
-See [here](doc/proposal.pdf).
+## Repository Structures
 
-## Research Report
-See [here]()
+## Empirical Study of Known Bugs
 
-## Demo Video
-See [here]()
+## AFL-based Fuzzing
+
+## Outputs
+- [Project proposal](doc/proposal/p.pdf).
+- [Research report](doc/report/p.pdf)
+- [Demo video]()
+
+## License
+
+## Author
+[Penghui Li](https://peng-hui.github.io) <phli@cse.cuhk.edu.hk>
