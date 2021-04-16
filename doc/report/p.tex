@@ -20,15 +20,6 @@
 \def\backtick{\char18}
 \lstdefinestyle{mystyle}{literate={`}{\backtick}1, escapechar=@}
 
-\newif\ifaddtable % the appendix table should be add to main text or not
-\addtabletrue
-
-\newif\ifsmalldos % the fig for dos CPU suage is small one or large one
-\smalldostrue
-
-\newif\ifexpandall % expand all not-that-necessary content
-\expandallfalse
-
 \usepackage{threeparttable}
 \usepackage{caption}
 \usepackage{subfig}
@@ -38,7 +29,6 @@
 \renewcommand\thefootnote{\textcolor{blue}{\arabic{footnote}}}
 
 %\setcopyright{iw3c2w3}
-%\usepackage[titletoc]{appendix}
 \usepackage[toc]{appendix}
 %-------------------------------------------------------------------------------
 \usepackage{diagbox}
@@ -73,7 +63,7 @@
 %\footnotesize
 %\setlength{\bibsep}{3pt}
 \bibliography{p,conf}
-%\input{appendix}
+\input{appendix}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{document}

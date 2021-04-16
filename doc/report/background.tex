@@ -1,0 +1,29 @@
+\section{Background}
+\label{s:background}
+
+\subsection{Performance Bugs}
+\label{s:background-bug}
+%\TODO{Have not had time to rephrase the decriptions from 'parser'->'compiler'}
+Performance bugs in a program could degrade its performance and waste computational resources.
+%
+Usually, people define performance bugs as software defects where relatively simple \emph{source-code} changes can significantly optimize the execution of the software while preserving the functionality \cite{perfbugstudy, killian2010finding, s2e}.
+%
+There can be several different performance issues regarding different categories of resources.
+%
+For example, some performance bugs could cause excessive CPU resource utilization, resulting in unexpectedly longer execution time; 
+%
+some other bugs could lead to huge memory consumption because of uncontrolled memory allocation and memory leak \cite{wen2020memlock}.
+%
+
+%they 
+Performance bugs lead to reduced throughput, increased latency, and wasted resources in software.
+%
+They particularly impact the end-user experiences.
+%
+What is worse, when a buggy application is deployed on the web servers, the bugs can be exploited by attackers for denial-of-service attacks, which can impair the availability of the services \cite{rampart}.
+%
+In the past, performance bugs have caused several publicized failures, causing many software projects to be abandoned \cite{perfbugstudy, lessons}.
+
+\subsection{Network Operating Systems}
+\label{s:background-nos}
+
