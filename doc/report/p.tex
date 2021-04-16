@@ -3,137 +3,81 @@
 \PassOptionsToPackage{breaklinks,colorlinks}{hyperref}
 \documentclass[usenames, sigconf, 10pt]{acmart}
 
-\usepackage{natbib}
-\usepackage{amsmath,amsopn}
-\usepackage{graphicx,fancyvrb,multirow}
-\usepackage{booktabs}
-\usepackage{array}
-\usepackage[T1]{fontenc}
-\usepackage{fancyhdr}
-\let\labelindent\relax
-\usepackage[labelfont=bf,font=small,skip=5pt]{caption}
-\pagestyle{fancy}
-\fancyhf{}
+% conference specific style
+\usepackage[]{natbib}
 
-\usepackage{fp}
-\usepackage{balance}
-\usepackage[ruled, vlined, inoutnumbered, linesnumbered]{algorithm2e}
-\usepackage[titletoc]{appendix}
+% common packages
+\include{pkgs}
 
-\usepackage{color}
-\definecolor{lightgray}{rgb}{0.92, 0.92, 0.92}
-\definecolor{darkgray}{rgb}{0.4, 0.4, 0.4}
-\definecolor{editorOcher}{rgb}{1, 0.5, 0}
-\definecolor{darkgreen}{rgb}{0,0.45,0}
-\definecolor{codeblue}{rgb}{0,0,0.55}
-\definecolor{darkred}{rgb}{0.8,0.1,0.15}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-
-\usepackage{listings}
-\lstset{
-  language=PHP,
-  backgroundcolor=\color{white},
-  basicstyle=\fontsize{7}{9}\ttfamily,
-  breakatwhitespace=false,
-  breaklines=true,
-  captionpos=b,
-  commentstyle=\color{codegray},
-  deletekeywords={...},
-  escapeinside={\%*}{*)},
-  extendedchars=true,
-  frame=bt,
-  keepspaces=true,
-  keywordstyle=\color{darkgreen}\bfseries,
-  ndkeywordstyle=\color{editorOcher}\ttfamily,
-  morekeywords={*,...,string,=>,function,<?,php, NULL},
-  numbers=left,
-  numbersep=7pt,
-  numberstyle=\footnotesize\color{darkgray}\ttfamily,
-  rulecolor=\color{black},         
-  showspaces=false,
-  showstringspaces=false,
-  showtabs=false,
-  stepnumber=1,
-  stringstyle=\color{darkred}\ttfamily,
-  tabsize=2,
-  title=\lstname,
-  firstnumber=1,
-  identifierstyle=\color{codeblue},
-  xleftmargin={2em},
-  framexleftmargin={2em},
-}
-
-
-\newcommand{\sys}{\mbox{\textsc{XSym}}\xspace}
+\newcommand{\sys}{\mbox{\textsc{NetPerfFuzz}}\xspace}
 
 % ref. http://en.wikibooks.org/wiki/LaTeX/Colors
-\newcommand{\WM}[1]{\textcolor{Violet}{[WM: #1]}}
 \newcommand{\PENGHUI}[1]{\textcolor{blue}{[PENGHUI: #1]}}
-\newcommand{\KL}[1]{\textcolor{Magenta}{[KL: #1]}}
-\newcommand{\XX}[0]{\textcolor{red}{XXX}\xspace}
+\newcommand{\XX}[0]{\textcolor{red}{XXX}}
 \newcommand{\XXX}[1]{\textcolor{red}{XXX: #1}}
 \newcommand{\TODO}[1]{\textcolor{Melon}{TODO: #1}}
 
-\newcommand{\totalfuncnum}{320\xspace}
-\newcommand{\navex}{Navex\xspace}
-\newcommand{\navexnum}{35\xspace}
-\newcommand{\funcnum}{287\xspace}
+\def\backtick{\char18}
+\lstdefinestyle{mystyle}{literate={`}{\backtick}1, escapechar=@}
 
-\newcommand{\num}[1]{#1}
-\newcommand{\cc}[1]{\mbox{\smaller[0.5]\texttt{#1}}}
-\def\Snospace~{\S{}}
-\renewcommand*\sectionautorefname{\Snospace}
-\def\sectionautorefname{\Snospace}
-\def\subsectionautorefname{\Snospace}
-\def\subsubsectionautorefname{\Snospace}
+\newif\ifaddtable % the appendix table should be add to main text or not
+\addtabletrue
 
-\newcommand{\eg}{{\em e.g., }}
-\newcommand{\etal}{{\em et al.}}
-\newcommand{\etc}{{\em etc.}}
-\newcommand{\ie}{{\em i.e., }}
+\newif\ifsmalldos % the fig for dos CPU suage is small one or large one
+\smalldostrue
 
-\newcommand{\PP}[1]{
-\vspace{2px}
-\noindent{\bf \IfEndWith{#1}{.}{#1}{#1.}}
-}
+\newif\ifexpandall % expand all not-that-necessary content
+\expandallfalse
 
-\newcommand{\PN}[1]{
-\vspace{2px}
-\noindent{\bf #1}
-}
+\usepackage{threeparttable}
+\usepackage{caption}
+\usepackage{subfig}
+\newcommand{\blstinline}[1]{\lstinline[numbers=none, caption={}, frame={},stringstyle=\color{black}, deletekeywords={md5, foreach,strcmp, array, stripslashes},identifierstyle=\color{black},commentstyle=\color{black}]{#1}} % PENGHUI{I don't like the colors in inline code}
+\input{cmds}
+\input{rev}
+\renewcommand\thefootnote{\textcolor{blue}{\arabic{footnote}}}
 
-\settopmatter{printacmref=false, printccs=false, printfolios=false}
-\setcopyright{none}
 %\setcopyright{iw3c2w3}
-\copyrightyear{2021}
-\acmYear{2021}
-\acmConference[CSCI '5570]{Large Scale Data Processing Systems}{Spring 2021}{CUHK}
-\acmBooktitle{Large Scale Data Processing Systems}
-\acmPrice{}
-\acmDOI{}
-\acmISBN{}
-
-
+%\usepackage[titletoc]{appendix}
+\usepackage[toc]{appendix}
+%-------------------------------------------------------------------------------
+\usepackage{diagbox}
 \begin{document}
-\input{hdr}
-\input{abstract}
+%-------------------------------------------------------------------------------
 
+\input{hdr}
+
+\input{abstract}
+%\date{}
 \maketitle
+
 \sloppy
 
+\input{intro}
+\input{background}
+%\input{problem}
+\input{study}
+\input{method}
+%\input{impl}
+%\input{eval}
+%\input{eval-other}
+%\input{eval-char}
+\input{discussion}
+%\input{relwk}
+\input{conclusion}
+%\input{ack}
 
-%\input{intro}
-\input{overview}
-%\input{background}
-%\input{study}
-%\input{performance}
-%\input{discussion}
-%\input{conclusion}
-
-\balance
+%\balance
 %\interlinepenalty=10000
-\bibliographystyle{sty/ACM-Reference-Format}
+\bibliographystyle{ACM-Reference-Format}
 %\footnotesize
 %\setlength{\bibsep}{3pt}
 \bibliography{p,conf}
+%\input{appendix}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{document}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%  LocalWords:  endnotes includegraphics fread ptr nobj noindent
+%%  LocalWords:  pdflatex acks

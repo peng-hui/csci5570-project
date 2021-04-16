@@ -1,0 +1,115 @@
+\section{Introduction}
+\label{s:intro}
+Network Operating Systems (NOSs) connect multiple computers and devices and manage network resources in the settings of Software Defined Networking (SDN).
+%
+NOSs manage multiple requests concurrently and provide the security in multiuser environments. 
+%
+To date, there are many NOSs being proposed and matained by network service vendors.
+%
+For example, Cisco Internetwork Operating System is a family of network operating systems used on many Cisco Systems routers and current Cisco network switches \cite{edgeworth2014ip};
+DD-WRT \cite{dd-wrt} is a Linux based open-sourced NOS suitable for various WLAN routers and embedded systems.
+%
+%
+
+Due to their popularity and critical uses, the bugs in these network operating systems can lead to severe security consequences.
+%
+In particular, network operating systems could have performance bugs, which cause excessive resource consumption and could negatively affect user experiences.
+%
+They can be further leveraged by attackers for launching application-layer denial-of-service (DoS) attacks \cite{crosby2003algodos}.
+%
+By specially crafting inputs to trigger a performance bug in the network operating systems,
+%
+the attacker can exhaust the server's resources (\eg{,} memory and CPU) and make the services unavailable to normal users. 
+
+%
+To the best of our knowledge, there currently has little knowledge about the prevalence of performance bugs in the wild.
+%performance bugs.
+%
+Prior studies on compilers generally focus on memory corruptions,
+%
+whereas performance bugs, especially in close-sourced network operating systems, are not well investigated and understood yet.
+%
+Some works studied performance issues in the regular expression engines \cite{shen2018rescue,wustholz2017static}, desktop software \cite{perfbugstudy}, and Android applications \cite{liu2014characterizing}.
+%
+Network operating systems, however, have not been covered.
+%
+To this end, we conduct a comprehensive study of the performance bugs in network operating systems to answer the following research questions:
+%
+\begin{itemize}[itemsep=0.5ex, parsep=0ex, leftmargin=3mm]
+    \item What are the main categories of the bugs?
+    \item What are the main factors that cause bugs?
+    \item How widespread are the bugs in network operating systems?
+    \item How severe are the bugs in network operating systems?
+\end{itemize}
+
+We empirically analyze \XX known performance bugs in mainstream network operating systems and thoroughly summarize their characteristics.
+%
+We observe that there has been a continuous growth in the number of reported performance bugs in the past 3 years.
+%
+We further identify that the ways that network operating systems handle the language's context-sensitive features are the dominant root cause of the performance bugs.
+%
+We reveal that the developers of network operating systems usually mitigate such exploitation by enforcing a hard limit for the maximum number of backtracking for certain tasks, which, however, limits the intended functionality of the network operating systems.
+
+
+In this work, we also explore detecting performance bugs in network operating systems.
+%
+To the best of our knowledge, there is not any tailored tools specially designed for detecting performance bugs in network operating systems.
+%
+Fuzzing \cite{slowfuzz, hotfuzz, perffuzz} eliminates the limitations of static analysis techniques 
+(\eg{,} high false positives) 
+\cite{perfbugstudy, nistor2013toddler,nistor2015caramel}.
+%
+It has become the go-to approach with thousands of vulnerabilities in real-world software.
+%
+Without a doubt, performance bugs in network operating systems can be fuzzed as well.
+%
+However, existing fuzzers \cite{slowfuzz, perffuzz} for performance bugs are not aware of special \emph{contex} of network operating systems and cannot effectively generate inputs to thoroughly exercise them.
+%
+Therefore, besides the bit/byte level mutation \cite{afl}, we summarize the rules of the inputs. 
+%
+We develop a syntax-tree based mutation strategy \cite{superion} to preserve and extend useful rules during the input mutation.
+%
+This helps to generate inputs more effectively.
+%
+
+We mainly focus on CPU exhaustion performance bugs.
+%
+To detect them, we monitor the program execution under the generated inputs.
+%
+We employ a statistical model using Chebyshev inequality to label abnormal cases as performance bugs.
+%
+This can potentially cause duplicate bug reports as multiple bug reports with only slight difference in the inputs actually trigger the same bug.
+%
+It is time-consuming and impractical to leverage human efforts to manually de-duplicate them.
+%
+Existing bug de-duplicating methods using coverage profile and call stacks are inaccurate and not applicable to performance bugs.
+%
+For example, it is hard to obtain an accurate and deterministic call stack that reveals the situation when a performance bug is triggered.
+%
+Therefore, we propose a execution trace similarity comparison algorithm to de-duplicate the reports.
+%
+Specifically, we represent the execution trace of each report into a vector;
+%
+we compute the cosine similarity between vector pairs and classify vectors (bug reports) with high similarity as the same bug.
+%
+
+We integrate abovementioned techniques into \sys.
+%
+We demonstrated \sys outperformed the state-of-the-art works \cite{slowfuzz, perffuzz} \emph{better} performance slowdown, and \emph{higher} code coverage.
+\sys is highly effective in generating test cases to trigger new code in the testing network operating systems.
+%
+Though we have not identified any new bugs yet after 6-hour testing, we plan to further keep \sys running for more time.
+%
+Hopenfully, our techniques can help find new bugs in the future.
+
+In summary, we make the following contributions in this work.
+\begin{itemize}
+    \item
+        We conduct a systematic study on performance bugs in network operating systems.
+        %
+        We present an empirical understanding of the performance bugs and the patches.
+        %
+    \item We develop a new system, \sys, to effectively generate useful inputs to detect performance bugs in network operating systems.
+        %
+    \item We demonstrate \sys can significantly outperform the state-of-the-art works.
+\end{itemize}

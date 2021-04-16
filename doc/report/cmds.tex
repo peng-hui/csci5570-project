@@ -30,6 +30,8 @@
 \def\chapterautorefname{\Snospace}
 %\renewcommand{\figurename}{Fig.}
 %\def\figureautorefname{\figurename}
+\renewcommand{\algorithmautorefname}{Algorithm}
+\newcommand*{\Appendixautorefname}{Appendix}
 \newcommand{\subfigureautorefname}{\figureautorefname}
 
 %\numberwithin{equation}{section}
@@ -58,15 +60,17 @@
 \newif\ifnotes\notestrue
 \ifdraft\else\notesfalse\fi
 
-\newcommand{\eg}{{\em e.g., }}
+\newcommand{\eg}{{\em e.g.}}
 \newcommand{\etal}{{\em et al.}}
 \newcommand{\etc}{{\em etc.}}
-\newcommand{\ie}{{\em i.e., }}
+\newcommand{\ie}{{\em i.e.}}
 
 % hide comments
 % \renewcommand{\TK}[1]{\ignorespaces}
 % \renewcommand{\XXX}[1]{\ignorespaces}
 % \renewcommand{\TODO}[1]{\ignorespaces}
+% \renewcommand{\YINXI}[1]{\ignorespaces}
+% \renewcommand{\PENGHUI}[1]{\ignorespaces}
 
 %% Ensure ligatures (e.g., ``fine official flag'') can be copy/pasted from PDF.
 \input{glyphtounicode}
