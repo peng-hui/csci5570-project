@@ -2,101 +2,86 @@
 \label{s:study}
 %To the best of our knowledge, there is currently little knowledge about 
 %
-In this section, we present an empirical study on several known performance bugs in mainstream Markdown compilers
-to help understand the characteristics of the performance bugs. % in Markdown compilers.
+In this section, we present an empirical study on several known performance bugs in mainstream network operating systems 
+to help understand their characteristics. % of the performance bugs. % in Markdown compilers.
 %
 
 \subsection{Data Collection}
 \label{s:study-bug}
 
+\iffalse
 \begin{table}[t]
 \centering
     \caption{The existing performance bugs included in our study.
-    Lang. means the underlying programming language for implementing the Markdown compiler.
+    %Lang. means the underlying programming language for implementing the Markdown compiler.
     }
 \label{table:study-dataset}
 \small
 %\resizebox{0.47\textwidth}{!}{
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
    \toprule
-      Software  & Lang. & \# Bugs & Time Periods \\
+      Software  & \# Bugs & Time Periods \\
     \midrule
-    CommonMark-spec & N/A & 13 & 10/26/2014 - 02/17/2020 \\
-    cmark & C & 13 & 01/14/2017 - 12/20/2020 \\
-    MD4C  & C & 6 & 03/10/2019 - 09/10/2019\\
-    commonmark.js  & JS & 9 & 09/28/2017 - 08/13/2019 \\
-    markdown-it & JS & 8 & 08/14/2019 - 11/20/2020\\
+    Cicso IOS \cite{cicso-ios} & 58 & 10/26/2001 - 01/13/2021 \\
+     & & 01/14/2017 - 12/20/2020 \\
+    MD4C & 6 & 03/10/2019 - 09/10/2019\\
+    commonmark.js & 9 & 09/28/2017 - 08/13/2019 \\
+    markdown-it & 8 & 08/14/2019 - 11/20/2020\\
 %    \midrule
 %    Total &  & (49) 52 & 10/26/2014 - 12/20/2020\\
    \bottomrule
 \end{tabular}
 %}
 \end{table}
+\fi
 
 %As shown in \autoref{table:study-dataset}, 
-We investigate performance bugs in the CommonMark specification \cite{commonmark-spec}
 %
-and 4 representative Markdown compilers chosen from the recommended implementations of the specification \cite{commonmark-spec-list}.
+We investigate performance bugs in the Cicso IOS \cite{cicso-ios}, 
 %
+which is one of the most popular network operating systems.
 %
-In particular, cmark \cite{cmark} and MD4C \cite{md4c} are two high-performance Markdown compilers written in C;
-cmark is ported and extended for GitHub \cite{cmark-gfm}.
+Ideally, if more network operating systems are included in the study we can present a more comprehensive characteriazation.
 %
-commonmark.js \cite{commonmarkjs} and markdown-it \cite{markdown-it} are two Node.js packages that are used in both client-side and server-side applications.
+However, due the the limited time and human labours allowed for this work,
 %
-We do not consider the software that uses Markdown compilers as one of its sub-components/modules (\eg{,} GitLab \cite{gitlab}), because such software usually does not modify the internal workflow of the included compilers.
-%its bug characteristics can be revealed in the analysis of the standalone Markdown compilers.
+we have to somehow restrict the study scope.
 %
-%Such software usually does not introduce new bug features concerning the performance bugs in its Markdown compiler components.
-%
-We limit our manual analysis to only four representative Markdown compilers because the analysis is quite time-consuming.
-%
-Furthermore, we find that our current software set already allows us to characterize the bugs and extract some general features,
-%
-which we will present later in this section.
-%
+Nevertheless, this work, as an early stage studying performance bugs in network operating systems, shall provide some general inspirations for future network system security analysis.
 
-In these Markdown compilers, we manually collected 49 distinct performance bugs from their public bug disclosure channels and their GitHub repository issues. % and collect performance bugs.
+We manually collected 58 distinct performance bugs from the database of Common Vulenrabilities and Exposures (CVE) \cite{cve}.
 %
-The bug distribution is presented in \autoref{table:study-dataset}.
+The detailed information about the vulnerabilities included in our study is presented in \autoref{cve-details}.
 %
-\iffalse
 Some bug reports might be duplicates.
 %
 We remove a duplicate bug from our dataset if it has a similar cause as another one,
 %
 though it can have a different exploit vector.
 %
-In summary, we obtained 49 distinct performance bugs by removing 3 duplicates from the ones reported from October 2014 to December 2020.
+In summary, we obtained 49 distinct performance bugs by removing \XXX duplicates from the ones reported from November 2001 to January 2021.
 %
-\fi
+We found all these performance bugs were abusing the CPU resources or memory resources.
 %
-We found all these performance bugs were abusing the CPU resources instead of other resources like memory.
-%
-This suggests CPU resource exhaustion performance bugs are the dominant type of performance bugs.
-%
-%
-We next characterize the 49 performance bugs and present our findings.
+%This suggests CPU resource exhaustion performance bugs are the dominant type of performance bugs.
 
-\subsection{Disclosure and Patch Time}
+We next characterize the performance bugs and present our findings.
+
+\subsection{Bug Disclosure Over Time}
 \label{s:study-time}
+
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.45\textwidth, trim =5 0 0 0,clip]{fig/disclosure-time.pdf}
-    \caption{The number of performance bug reports over time from October 2014 to December 2020.
+    \caption{The number of performance bug reports over time.
     }
     \label{fig:disclosure-time}
 \end{figure}
 
-To understand the trend of performance bugs, we analyze the disclosure time of the 49 bugs.
+To understand the trend of performance bugs, we analyze the disclosure time of them.  
+We depict the number of performance bugs along the time they were disclosed in \autoref{fig:disclosure-time}.
 %
-We depict the number of performance bugs along the time they were disclosed for each software in \autoref{fig:disclosure-time}.
-%
-%Unlike other types of bugs such as memory errors \cite{sun2016toward},
-%
-%we find that performance bugs do not appear throughout the release history of the applications.
-%
-We observe that few bugs were reported before early 2015, and the number of reported bugs had been gradually growing from early 2018 till late 2020.
+We observe that few bugs were reported before early 2004, and the number of reported bugs had been gradually growing from early 2018 till late 2020.
 %
 In particular, 28 (57.14\%) out of the 49 performance bugs were disclosed from April 2018 till December 2020 (22 months);
 %
@@ -104,36 +89,13 @@ In particular, 28 (57.14\%) out of the 49 performance bugs were disclosed from A
 %
 It reveals that such bugs had been gradually drawing the attention from the compiler developers and security analysts.
 %
-%Each individual Markdown compiler also shares a similar bug disclosure trend.
-%\WM{<- What does this sentence mean? How is it relevant?}
-%\PENGHUI{The figure contains individual software info, but that is not well used yet? I just use the sentence to mention that point}
-
-We further analyze the time it takes to release a patch since a bug is initially reported.
-%
-We were able to successfully determine the time for 32 performance bugs.
-%
-For the rest bugs, either we did not find the explicit bug patch time \cite{cmark-218}, or they have not been patched yet \cite{cmark-373}.
-%
-We find that the average duration to patch performance bugs is 19 days.
-%
-Further, 23 (71.88\%) bugs were patched within 30 days.
-%
-We particularly investigated those bugs that took much longer patch time, \eg{}, more than 4 months.
-%
-We observed that they were usually related to the ambiguity of the CommonMark specification.
-%
-Thus their patches usually require some work from both the compiler developers and the specification maintainers.
-%
-Some of the bugs and the patches lead to the modifications of the language specification.
-
 
 \subsection{Root Causes}
 \label{s:study-root-causes}
-%There are a large variety of potential causes for performance bugs.
 %
 Identifying the common root causes of real-world performance bugs can benefit potential future research and software developments.
 %
-We manually analyzed 49 performance bugs and successfully figured out the root causes for 39 bugs.
+We manually analyzed the performance bugs and successfully figured out the root causes for \XX bugs.
 %
 We classify the root causes into three categories.
 %
@@ -141,9 +103,7 @@ A bug is assigned to multiple categories if it has multiple major causes.
 
 
 \PN{R1:} \emph{Super-linear algorithms.}
-%crafted inputs that exercise worst-case complexity and exhaust the victim’s computational resources,
 Some normal algorithms implemented in Markdown compilers have super-linear worst-case complexity \cite{slowfuzz, perffuzz}.
-%although the average complexity is normally linear.
 %
 Attackers can craft inputs to trigger the worst-case behaviors and lead to performance issues.
 %
@@ -352,7 +312,7 @@ The results show that unlimited backtracking behaviors were quite common---all t
 
 \end{comment}
 
-
+\iffalse
 \subsection{Patches of Performance Bugs}
 \label{s:study-patch}
 We investigate the patches of performance bugs in Markdown compilers to understand how they were addressed.
@@ -395,3 +355,4 @@ Some inefficient code snippets need to be further optimized to eliminate the und
 %
 For some other performance bugs caused by incorrect regular expressions,
 compiler developers mainly review and rewrite the regular expressions.
+\fi
