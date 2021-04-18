@@ -2,7 +2,7 @@
 \label{s:method}
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.45\textwidth]{fig/ase-parser-dos.pdf}
+    \includegraphics[width=0.45\textwidth]{fig/netfuzz.pdf}
     \caption{The architecture of \sys.
     }
     \label{fig:arch}
@@ -88,7 +88,7 @@ As stated in prior work \cite{perffuzz}, many programs (\eg{,} PHP hash function
 We thus do not use the execution path length (\eg{,} number of executed instructions) to guide \sys because it might fail to find the performance issues caused by local maxima.
 %to the ability to overcome local maxima in a non-convex performance space
 %
-Therefore, as in the state-of-the-art work, PerfFuzz \cite{perffuzz}, we design \sys to favor those test cases that maximize certain CFG edges to better detect performance bugs.
+Therefore, as in the state-of-the-art work, PerfFuzz \cite{perffuzz}, we design \sys to favor those test cases that maximize certain CFG edge hits to better detect performance bugs.
 %
 In this way, \sys tends to select test cases to either trigger new code or exhaust certain CFG edges.
 %
