@@ -49,7 +49,7 @@ we have to somehow restrict the study scope.
 %
 Nevertheless, this work, as an early stage studying performance bugs in network operating systems, shall provide some general inspirations for future network system security analysis.
 
-We manually collected 58 distinct performance bugs from the database of Common Vulenrabilities and Exposures (CVE) \cite{cve}.
+We manually collected performance bugs from the database of Common Vulenrabilities and Exposures (CVE) \cite{cve}.
 %
 The detailed information about the vulnerabilities included in our study is presented in \autoref{cve-details}.
 %
@@ -59,7 +59,7 @@ We remove a duplicate bug from our dataset if it has a similar cause as another 
 %
 though it can have a different exploit vector.
 %
-In summary, we obtained 49 distinct performance bugs by removing \XXX duplicates from the ones reported from November 2001 to January 2021.
+In summary, we obtained 51 distinct performance bugs reported from July 2007 to January 2021.
 %
 We found all these performance bugs were abusing the CPU resources or memory resources.
 %
@@ -70,6 +70,7 @@ We next characterize the performance bugs and present our findings.
 \subsection{Bug Disclosure Over Time}
 \label{s:study-time}
 
+\iffalse
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.45\textwidth, trim =5 0 0 0,clip]{fig/disclosure-time.pdf}
@@ -77,15 +78,17 @@ We next characterize the performance bugs and present our findings.
     }
     \label{fig:disclosure-time}
 \end{figure}
+\fi
 
 To understand the trend of performance bugs, we analyze the disclosure time of them.  
-We depict the number of performance bugs along the time they were disclosed in \autoref{fig:disclosure-time}.
+We present the performance bug disclosure in \autoref{tab:cve-details} in \autoref{cve-details}.
+%We depict the number of performance bugs along the time they were disclosed in \autoref{fig:disclosure-time}.
 %
-We observe that few bugs were reported before early 2004, and the number of reported bugs had been gradually growing from early 2018 till late 2020.
+We observe that few bugs were reported before early 2010, and the number of reported bugs had been gradually growing from early 2017 till late 2020.
 %
-In particular, 28 (57.14\%) out of the 49 performance bugs were disclosed from April 2018 till December 2020 (22 months);
+In particular, 41 (80.39\%) out of the 51 performance bugs were disclosed from January 2015 till Janurary 2021 (72 months);
 %
-21 (42.86\%) bugs were reported from August 2014 to December 2017 (41 months).
+10 (19.61\%) bugs were reported from July 2007 to September 2014 (86 months).
 %
 It reveals that such bugs had been gradually drawing the attention from the compiler developers and security analysts.
 %
@@ -95,13 +98,13 @@ It reveals that such bugs had been gradually drawing the attention from the comp
 %
 Identifying the common root causes of real-world performance bugs can benefit potential future research and software developments.
 %
-We manually analyzed the performance bugs and successfully figured out the root causes for \XX bugs.
+We manually analyzed the performance bugs and successfully figured out the root causes for 39 bugs.
 %
 We classify the root causes into three categories.
 %
 A bug is assigned to multiple categories if it has multiple major causes.
 
-
+\iffalse
 \PN{R1:} \emph{Super-linear algorithms.}
 Some normal algorithms implemented in Markdown compilers have super-linear worst-case complexity \cite{slowfuzz, perffuzz}.
 %
@@ -193,40 +196,46 @@ Thus the time for handling such input strings is at least in polynomial time com
 %
 By providing a long input with many such open tokens, it is simple to cost the compiler several-second or even more execution time.
 %Depending on how such backtracking strategies are designed, such inputs can cause polynomial or higher complexity performance issues, easily resulting in seconds of execution time.
+\fi
 
 
-\PN{R2:} \emph{Inefficient code.}
+\PN{R1:} \emph{Inefficient code.}
 %
-Some inefficient code in the Markdown compilers could also lead to performance issues.
+Some inefficient code in the network operating systems could also lead to performance issues.
 %
 For instance, some functions do not coordinate well for certain functionalities.
 %
-We find that 9 performance bugs were caused by such inefficient code.
+We find that 19 performance bugs were caused by such inefficient code.
 %
-Unlike the algorithms in R1, such performance issues could be addressed by optimizing the inefficient code.
+Such kind of performance issues could be addressed by optimizing the inefficient code.
 %
 However, each problem needs to be separately analyzed and fixed, which could be time-consuming.
 %
 We next discuss an example of such inefficient code.
 %
 
-Minor performance issues in individual problematic functions could accumulate when the given inputs can repeatedly trigger the execution of such functions.
+Data parsers are widely applied in network operating systems.
 %
-For example, in one bug, cmark calls \blstinline{S_find_first_nonspace()} to find the first non-space character from the current offset in a line. %, which has a minor performance issue by
+For example, XML parsers and TLS layer parsers.
+%
+Such parsers can analyze the input data among the computers within the network systems.
+%
+Minor performance issues in such parsers could accumulate when the given inputs can repeatedly trigger the execution of such functions.
+%
+%For example, in one bug, cmark calls \blstinline{S_find_first_nonspace()} to find the first non-space character from the current offset in a line. %, which has a minor performance issue by
 %
 %The function went back from the current offset backwardly to find the first non-space character,
-The function in a second call would still search from the initial position,
-even if in a previous call it has already recognized the location of the first non-space character.
+%The function in a second call would still search from the initial position,
+%even if in a previous call it has already recognized the location of the first non-space character.
 %
-This means some function calls to \blstinline{S_find_first_nonspace()} sometimes were unnecessary.
+%This means some function calls to \blstinline{S_find_first_nonspace()} sometimes were unnecessary.
 %
-Crafted inputs with lots of complicated and nested indents could result in repeated invocations of this function and cause performance bugs.
+Crafted inputs with lots of complicated and nested indents could result in repeated invocations of the function and cause performance bugs.
 %
-The problem, however, can be solved by using better strategies like cashing the positions of the previously found non-space characters.
+%The problem, however, can be solved by using better strategies like cashing the positions of the previously found non-space characters.
 %
 
-\iffalse
-Second, some Markdown compilers match input strings using regular expressions (regex).
+Second, some performance bugs are caused by regular expressions (regex).
 %
 Some vulnerable regex could lead to performance bugs if the regex engine needs to backtrack (in exponential time) when matching some specific inputs.
 %
@@ -236,26 +245,9 @@ Thus the total number of possible backtracking paths is exponential if the match
 %
 This is also known as regular expression denial-of-service (ReDoS) \cite{freezing, shen2018rescue, redosimpact, wustholz2017static}.
 %
-For instance, one bug in commonmark.js was caused by using a regex containing a vulnerable subexpression \blstinline{(.|\\\\)*]}\footnote{The vulnerable subexpression is simplified for demonstration.}
-to match link labels (\eg{}, the \blstinline{[demo]} in \blstinline{'[demo](url 'title')'}).
-%
-Its syntax is to match any non empty character \blstinline{.} or a single blackslash \blstinline{\\\\} for any number of times \blstinline{*}, followed by a closing bracket \blstinline{]}.
-%
-%
-Suppose the compiler uses this regex to match an input string \blstinline{'\\\\\\\\...'} that contains $n$ backslash characters.
-%
-The matching would eventually fail because the input string does not contain any closing bracket.
-%
-But before the failure, the regex engine would check all possible matches for the previous part \blstinline{(.|\\\\)*}.
-%
-%
-Each backslash character in the input string can match either \blstinline{.} or \blstinline{\\\\}, so $n$ characters would cause the engine to backtrack with $2^n$ possible paths.
-%
-Nevertheless, such performance bugs could be addressed by fixing the vulnerable regex.
-\fi
 %
 
-\PN{R3:} \emph{Implementation-specific issues.}
+\PN{R3:} \emph{Problematic implementations.}
 Other causes of the bugs are specific to the compiler implementations or designs.
 %
 Some compilers overlooked part of the CommonMark specification, for example, Unicode support.

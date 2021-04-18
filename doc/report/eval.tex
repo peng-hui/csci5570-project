@@ -1,0 +1,234 @@
+\section{Detecting Performance Bugs via \sys}
+\label{s:eval}
+In this section, we investigate the prevalence of performance bugs in the wild.
+%
+We planed to test network operating systems via fuzzing in this work.
+%
+However, we temporarily failed to do so due to some practical issues.
+%
+For example, 1) the time for this research project is too short;
+%
+and 2) we have not found a flexibile way to apply our instrumented C/C++ compilers to compile an executable network operating systems for the fuzzing.
+%
+After more than one week exploration, we decided to give it up.
+%
+Give the truth, we apply \sys to detect performance bugs in othe systems.
+%
+Since the methodology we propose in this work is general thus we test \sys in 3 compilers\footnote{The authors choose them as they have worked on related topics before.} to verify its efficacy.
+%
+We naturally admit this limitation.
+%
+However, we still believe this engineering problem can be fixed give more time.
+%
+We will definitely make it as our future work.
+
+
+\PP{Experiments}
+Each compiler is first instrumented using our enhanced C compiler in \sys.
+%\WM{Where did you introduce this enhanced C compiler? What kind of instrumentation is performed?}
+%
+We then apply \sys to detect performance bugs on the instrumented compilers.
+%
+%
+We apply the PoCs collected in \autoref{s:study} as the initial seeds
+%
+and configure \sys to use a single process and a timeout of 6 hours.
+%
+Through our preliminary study, we empirically set $k$ to 5 and the cosine similarity threshold to 0.91 for all testing software.
+%
+All experiments described in this section are conducted on a server running Debian GNU/Linux 9, with an Intel Xeon CPU and 96GB RAM.
+%\WM{What is the resource computation threshold you use in the evaluation?}
+%\PENGHUI{we empirically set that.}
+%
+%We run the experiments of each process all in a single process.
+%We use the Linux \cc{time} command to measure the execution time of a program executed in a single process.
+%
+%Specifically, we measure the CPU time spent in both user-mode code and kernel.
+%
+
+%
+%For each test, we use a single process to escape some multiple-process optimizations.
+%
+%
+%For each pattern, we try to repeat the attacking core and insert necessary redundant content.
+%
+%
+\subsection{Results}
+
+\begin{table}[t]
+\centering
+\caption{The dataset of the compilers and bug detection results.
+Rep. is the reports from the fuzzer.
+U-Rep. is the unique report after de-duplicating the reports.
+Con. means the confirmed bugs.
+%Pop. denotes the popularity described using the number of stars and forks of the repositories on the code hosting websites.
+    }
+\label{table:eval-compiler}
+\small
+%\resizebox{0.47\textwidth}{!}{
+\begin{tabular}{lccccc}
+   \toprule
+    Software & Lang. & \# Rep. & \# U-Rep. \\
+    \midrule
+    cmark (0.29.0) &C & 1321 & 7  \\
+    MD4C (0.4.7) & C & 239 & 3  \\ 
+    cmark-gfm (0.29.0) & C & 981 & 4 \\
+    \bottomrule
+\end{tabular}
+%}
+\end{table}
+
+
+
+
+%\input{table}
+
+%
+%
+We present the performance bug detection results in \autoref{table:eval-compiler}.
+%
+Duplicate performance bug reports are naturally common during fuzzing.
+%
+The fuzzing part of \sys reported \num{2541} cases in total and our de-duplicating algorithm merged them into 14 distinct reports.
+%
+We observe that all the 14 cases did successfully slow down the compilers by 2.31\x to 7.28\x compared to normal-performance cases.
+%\WM{How slow?}
+%
+
+We further manually check the reports to validate the performance bugs.
+%
+Since \sys limits the input size like in other works \cite{oss-fuzz, slowfuzz, perffuzz} due to the concerns of large search space, 
+%
+our manual analysis attempts to identify the severity of the performance slowdown in more realistic scenarios, \ie{,} larger input sizes.
+%
+To this end, we first identify the exploit input patterns in the reports that exhaust the run-time resources.
+%
+With the patterns, we further construct larger test cases to verify the performance issues in practice.
+%
+Finally, 7 cases in 2 compilers were confirmed as performance bugs, including 4 new bugs, after our manual analysis.
+%
+We are in the process of reporting the new bugs to the concerned vendors.
+At the time of writing, 1 bug has been well acknowledged.
+
+We found no bug in MD4C.
+%
+The developers of MD4C explicitly mention that they seriously considered the performance as one of their main focuses during the implementation \cite{md4c}.
+%
+%Therefore, such a difference among compilers might suggest that the efforts devoted to the performance issues were different among the different compilers' developers. 
+Therefore, the performance bugs could be avoided with domain knowledge and special care, which are often difficult for most developers.
+%
+%We will discuss the false-positive cases in \autoref{s:eval-fp}.
+%
+
+%\subsubsection{False Positives}
+%\label{s:eval-fp}
+%As presented in \autoref{table:eval-compiler}, \sys has false positives.
+
+\subsection{Comparison}
+\label{s:comparison}
+We compare \sys with two state-of-the-art works, SlowFuzz \cite{slowfuzz} and PerfFuzz \cite{perffuzz}.
+%
+\sys and PerfFuzz are implemented above AFL whereas SlowFuzz is built on top of libFuzzer \cite{libfuzzer}.
+%
+SlowFuzz (libFuzzer) uses in-process fuzzing, which is much faster as it has no overhead for process start-up; however, it is also more fragile and more restrictive because it traps and stops at crashes \cite{libfuzzer}.
+%\WM{You write one sentence not two with one period.}
+%
+Nevertheless, 
+we evaluate all the tools with the same dataset in \autoref{table:eval-compiler} and run them for the same amount of time---6 hours---for a fair comparison.
+%
+We failed to run SlowFuzz on MD4C because of some unexpected crashes after several minutes of the execution.
+%
+To the best of our knowledge, there is no way to suppress such crashes.
+%
+\sys and PerfFuzz---AFL-based fuzzers---do not suffer from this problem.
+%
+
+The results show that \sys outperformed PerfFuzz and SlowFuzz by detecting more performance bugs.
+%
+In particular, PerfFuzz reported 820/114/783 cases in cmark/MD4C/cmark-gfm, respectively;
+%
+SlowFuzz reported 432/408 cases in cmark/cmark-gfm, respectively.
+%
+These results also demonstrate the need of a report de-duplication method.
+%
+We applied our report de-duplication algorithm to identify unique bugs and then manually confirmed the reports.
+%
+Finally, PerfFuzz detected 2/0/2 real performance bugs in cmark/MD4C/cmark-gfm, respectively.
+%
+SlowFuzz detected 1/1 real performance bugs in cmark/cmark-gfm, respectively.
+
+%Next, we further study the performance slowdown caused by each tool and its code coverage.
+
+\subsubsection{Performance Slowdown}
+\label{s:eval-slowdown}
+
+\begin{table}[t]
+\centering
+    \caption{The performance slowdown and code coverage of \sys, PerfFuzz \cite{perffuzz}, and SlowFuzz \cite{slowfuzz}.
+    The Best Slowdown across all tools is normalized over the baseline of the same random normal-performance case.
+    Line Cov. and Func. Cov. denote line coverage and function coverage, respectively.
+    }
+\label{table:eval-comparison}
+\small
+%\resizebox{0.47\textwidth}{!}{
+    \begin{tabular}{clccc}
+        \toprule
+        Tool & Software & Best Slowdown & Line Cov. & Func. Cov. \\
+        \midrule
+        \multirow{3}{*}{\rotatebox[origin=c]{90}{\tiny{\sys}}} \
+        & cmark & 7.28\x & 71.90\% & 67.91\%\\
+        & MD4C & 2.31\x & 76.22\% & 58.11\%\\
+        & cmark-gfm & 6.54\x & 55.78\% & 57.35\%\\
+        \midrule
+        \multirow{3}{*}{\rotatebox[origin=c]{90}{\tiny{ PerfFuzz}}} \
+        & cmark & 6.82\x & 56.21\% & 51.35\%\\
+        & MD4C & 2.21\x & 67.20\% & 50.20\%\\
+        & cmark-gfm & 5.05\x & 48.26\% & 44.31\%\\
+        \midrule
+        %\multirow{2}{*}{\rotatebox[origin=c]{60}{\scriptsize{SlowFuzz}}} & cmark \\
+        \multirow{2}{*}{\rotatebox[origin=c]{90}{\tiny{SlowFuzz}}} \
+        & cmark & 4.32\x & 40.28\% & 41.65\%\\
+        & cmark-gfm & 3.29\x & 38.30\% & 42.33\%\\
+        \bottomrule
+    \end{tabular}
+%}
+\end{table}
+
+\autoref{table:eval-comparison} shows the performance slowdown caused by the inputs generated by \sys, PerfFuzz, and SlowFuzz.
+%
+We use the maximum execution path length as the performance metric, 
+%
+%As suggested in \cite{perffuzz}, we also use the sum of CFG edge hits under a test case as the execution path length.
+%
+%\WM{In your design, you argued that this is not a good metric so you used a different one.}
+%
+and normalize the performance slowdown using a baseline of a random normal-performance case.
+%
+We notice that, though all tools caused performance slowdown on the testing applications,
+%
+\sys achieved a 14.71\% higher average best performance slowdown over PerfFuzz, and 41.21\% over SlowFuzz.
+%
+Furthermore, we observe that \sys could generate inputs that slow down the compilers much faster than the other tools.
+%
+For example, to reach a 4.32\x performance slowdown on cmark,
+\sys took 3.2 hours, whereas PerfFuzz and SlowFuzz used 3.9 hours and 6.0 hours, respectively.
+%
+This demonstrates the high efficacy of \sys in detecting performance bugs.
+
+\subsubsection{Code Coverage}
+%
+We also evaluate the code coverage each tool achieves.
+%
+We collect the test cases generated by each tool and run on afl-cov \cite{afl-cov},
+%
+which detects the code coverage using the overall execution traces covered by the test cases.
+%
+Though SlowFuzz is not based on AFL, we believe using its test cases on afl-cov can accurately reflect the code coverage under a fair metric.
+%
+
+We present the results of line coverage and function coverage in \autoref{table:eval-comparison}.
+%
+\sys outperformed PerfFuzz by 20.75\% more lines of code and 13.17\% more functions;
+%
+\sys outperformed SlowFuzz by 28.68\% more lines of code and 19.80\% more functions.
+%

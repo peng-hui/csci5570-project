@@ -70,8 +70,38 @@
 \end{table*}
 
 
-\section{Future Work}
-
 \section{Artifact Instructions}
+\subsection{Download and Install \sys}
+We make \sys publically for the assessment of this project at \url{https://github.com/peng-hui/csci5570-project}.
+%
+Interested readers feel free to download, install, and verify our results.
+%
+Below are some details.
 
+\begin{enumerate}
+    \item Download or clone the project to your machine or server.
+        The code is tested on Debian GNU/Linux 9.
+    \item Compile the AFL via
+        \cc{cd csci5570-project/afl \&\& make}.
+    \item Compile the instrumented compile via
+        \cc{cd llvm_mode \&\& make}.
+\end{enumerate}
+
+\subsection{Instrument the Testing Software}
+This part varies depending on the testing software.
+%
+Please repalce the CC compiler with \cc{csci5570-project/afl/afl-clang-fast} and CXX compiler with \cc{csci5570-project/afl/afl-clang-fast++}.
+%
+Make sure you can compile the testing software successfully.
+
+\subsection{Run \sys}
+Suppose you have compiled \cc{cmark}.
+Then you only need to run \cc{/afl-fuzz -p -i seeds -o out/ -N 64 ./cmark @@}
+The \cc{seeds} is optional.
+%
+The \cc{out} is the result directory.
+
+\subsection{Report De-Duplication}
+Simply run \cc{python3 cosine-similarity.py}.
+You might have to adjust the result directory accordingly.
 \end{appendices}

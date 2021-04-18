@@ -1,0 +1,35 @@
+\section{Related work}
+\label{s:relwk}
+
+\PP{Understanding performance bugs}
+Understanding the characteristics of performance bugs can help design techniques to detect and fix performance bugs.
+%
+Existing studies focus on the performance bugs in programs on the desktop platform \cite{perfbugstudy, zaman2012qualitative}, mobile platform \cite{liu2014characterizing}, and the web server end \cite{perfbugstudy}, \etc{}
+%
+For instance, Zaman \etal{} studied performance bugs in Firefox and Chrome and provided suggestions to fix the bugs and to validate the patches \cite{zaman2012qualitative}.
+%
+However, there is little understanding of performance bugs in the network operating systems.
+%
+Sub \etal{} studied GCC and LLVM compilers but they did not focus on the performance issues \cite{sun2016toward}.
+%
+Our work studies an understudied problem---performance bugs.
+
+\PP{Detecting performance bugs}
+The detection of performance issues has drawn significant attention from researchers over the past years.
+%
+Prior studies focus on application-layer DoS vulnerabilities \cite{rampart, jazi2017detecting, durcekova2012sophisticated}, 
+%
+algorithmic complexity DoS vulnerabilities \cite{crosby2003algodos, smith2006backtracking}, and other general performance issues \cite{perfbugstudy,liu2014characterizing}.
+%that exhaust CPU resources.
+Static methods analyze the source code of the applications and diagnose vulnerable bug patterns, for example, repeated loops \cite{nistor2013toddler,nistor2015caramel}.
+%
+Dynamic methods are also applied to identify performance bugs.
+%
+SlowFuzz \cite{slowfuzz}, PerfFuzz \cite{perffuzz}, and HotFuzz \cite{hotfuzz} propose new fuzzing solutions to detect the worst-case algorithmic complexity vulnerabilities.
+%
+%Hybrid approaches \cite{shen2018rescue} combine static analysis and dynamic test generation to detect performance bugs like ReDoS problems in the Java engine.
+%
+Our work improves existing solutions via a fitness function and a new report de-duplication method.
+%
+Our evaluation has well demonstrated its efficacy.
+%
