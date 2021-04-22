@@ -5,20 +5,17 @@ Network systems connect the Internet world nowadays. The bugs in network systems
 ## Repository Structures
 ```
 csci5570-project
-├── README.md
 ├── afl
-│   ├── ...
 │   └── README.md
 ├── doc
 │   ├── README.md
 │   ├── proposal
 │   └── report
-└── study
-    └── README.md
+└── README.md
 ```
 
 ## Empirical Study of Known Bugs
-- See [study](study/README.md)
+- See the paper (appendix) for more details.
 
 ## AFL-based Fuzzing
 - See [afl](afl/README.md)
