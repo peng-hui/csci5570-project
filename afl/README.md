@@ -25,7 +25,7 @@ Here is a simple example to compile an insertion-sort program.
 For other cases like Markdown compilers, you might need to modify the Makefile to specify the compilers.
 
 ### Run the Tool
-See AFL for more instruction about the command line options. Here is the corresponding command for testing insertion-sort.
+See AFL's [README](docs/README) for more instruction about the command line options. Here is the corresponding command for testing insertion-sort.
 ```
 ./afl-fuzz -p -i isort-seeds -o out/ -N 64 ./isort @@
 ```
