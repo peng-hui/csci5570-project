@@ -234,7 +234,7 @@ static s32 cpu_core_count;            /* CPU core count                   */
 #ifdef HAVE_AFFINITY
 
 static s32 cpu_aff = -1;       	      /* Selected CPU core                */
-static s32 cpu_a = -1;       	      /* Selected CPU core                */
+
 #endif /* HAVE_AFFINITY */
 
 static FILE* plot_file;               /* Gnuplot output file              */
@@ -315,8 +315,7 @@ enum {
   /* 13 */ STAGE_EXTRAS_UI,
   /* 14 */ STAGE_EXTRAS_AO,
   /* 15 */ STAGE_HAVOC,
-  /* 16 */ STAGE_SPLICE,
-  /* 17 */ STAGE_TREE
+  /* 16 */ STAGE_SPLICE
 };
 
 /* Stage value types */
@@ -350,10 +349,6 @@ void DEBUG (char const *fmt, ...) {
     vfprintf(f, fmt, ap);
     va_end(ap);
 }
-//tree
-int parse(u8* target,size_t len,u8* second,size_t lenS);
-void fuzz(int index, char** ret, size_t* retlen);
-//end of tree
 
 
 /* Get unix time in milliseconds */
@@ -526,7 +521,7 @@ static void bind_to_free_cpu(void) {
   }
 
   OKF("Found a free CPU core, binding to #%u.", i);
-  if(cpu_a!=-1)i=cpu_a;	
+
   cpu_aff = i;
 
   CPU_ZERO(&c);
@@ -2127,7 +2122,7 @@ EXP_ST void init_forkserver(char** argv) {
     if (!getrlimit(RLIMIT_NOFILE, &r) && r.rlim_cur < FORKSRV_FD + 2) {
 
       r.rlim_cur = FORKSRV_FD + 2;
-      //setrlimit(RLIMIT_NOFILE, &r); /* Ignore errors */
+      setrlimit(RLIMIT_NOFILE, &r); /* Ignore errors */
 
     }
 
@@ -2137,7 +2132,7 @@ EXP_ST void init_forkserver(char** argv) {
 
 #ifdef RLIMIT_AS
 
-      //setrlimit(RLIMIT_AS, &r); /* Ignore errors */
+      setrlimit(RLIMIT_AS, &r); /* Ignore errors */
 
 #else
 
@@ -2145,7 +2140,7 @@ EXP_ST void init_forkserver(char** argv) {
          according to reliable sources, RLIMIT_DATA covers anonymous
          maps - so we should be getting good protection against OOM bugs. */
 
-      //setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
+      setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
 
 #endif /* ^RLIMIT_AS */
 
@@ -2157,7 +2152,7 @@ EXP_ST void init_forkserver(char** argv) {
 
     r.rlim_max = r.rlim_cur = 0;
 
-    //setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
+    setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
 
     /* Isolate the process and configure standard descriptors. If out_file is
        specified, stdin is /dev/null; otherwise, out_fd is cloned instead. */
@@ -2426,11 +2421,11 @@ static u8 run_target(char** argv, u32 timeout) {
 
 #ifdef RLIMIT_AS
 
-        //setrlimit(RLIMIT_AS, &r); /* Ignore errors */
+        setrlimit(RLIMIT_AS, &r); /* Ignore errors */
 
 #else
 
-        //setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
+        setrlimit(RLIMIT_DATA, &r); /* Ignore errors */
 
 #endif /* ^RLIMIT_AS */
 
@@ -2438,7 +2433,7 @@ static u8 run_target(char** argv, u32 timeout) {
 
       r.rlim_max = r.rlim_cur = 0;
 
-      //setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
+      setrlimit(RLIMIT_CORE, &r); /* Ignore errors */
 
       /* Isolate the process and configure standard descriptors. If out_file is
          specified, stdin is /dev/null; otherwise, out_fd is cloned instead. */
@@ -2592,6 +2587,7 @@ static u8 run_target(char** argv, u32 timeout) {
   return FAULT_NONE;
 
 }
+
 
 /* Write modified data to file for testing. If out_file is set, the old file
    is unlinked and a new one is created. Otherwise, out_fd is rewound and
@@ -4027,6 +4023,7 @@ static void check_term_size(void);
    execve() calls, plus in several other circumstances. */
 
 static void show_stats(void) {
+
   static u64 last_stats_ms, last_plot_ms, last_ms, last_execs;
   static double avg_exec;
   double t_byte_ratio, stab_ratio;
@@ -4398,10 +4395,9 @@ static void show_stats(void) {
        "  imported : " cRST "%-10s " bSTG bV "\n", tmp,
        sync_id ? DI(queued_imported) : (u8*)"n/a");
 
-  sprintf(tmp, "%s/%s, %s/%s , %s/%s",
+  sprintf(tmp, "%s/%s, %s/%s",
           DI(stage_finds[STAGE_HAVOC]), DI(stage_cycles[STAGE_HAVOC]),
-          DI(stage_finds[STAGE_SPLICE]), DI(stage_cycles[STAGE_SPLICE]),
-          DI(stage_finds[STAGE_TREE]), DI(stage_cycles[STAGE_TREE]));
+          DI(stage_finds[STAGE_SPLICE]), DI(stage_cycles[STAGE_SPLICE]));
 
   SAYF(bV bSTOP "       havoc : " cRST "%-37s " bSTG bV bSTOP, tmp);
 
@@ -4620,8 +4616,7 @@ static u32 next_p2(u32 val) {
    file size, to keep the stage short and sweet. */
 
 static u8 trim_case(char** argv, struct queue_entry* q, u8* in_buf) {
-  return 0;
-  
+
   static u8 tmp[64];
   static u8 clean_trace[MAP_SIZE];
   static u32 clean_perf[PERF_SIZE];
@@ -5254,7 +5249,7 @@ static u8 fuzz_one(char** argv) {
 
   orig_in = in_buf = mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 
-  if (orig_in == MAP_FAILED&&len!=0) PFATAL("Unable to mmap '%s'", queue_cur->fname);
+  if (orig_in == MAP_FAILED) PFATAL("Unable to mmap '%s'", queue_cur->fname);
 
   close(fd);
 
@@ -5314,6 +5309,7 @@ static u8 fuzz_one(char** argv) {
   /************
    * TRIMMING *
    ************/
+
   if (!dumb_mode && !queue_cur->trim_done) {
 
     u8 res = trim_case(argv, queue_cur, in_buf);
@@ -5331,9 +5327,10 @@ static u8 fuzz_one(char** argv) {
     queue_cur->trim_done = 1;
 
     if (len != queue_cur->len) len = queue_cur->len;
-  }
-  memcpy(out_buf, in_buf, len);
 
+  }
+
+  memcpy(out_buf, in_buf, len);
 
   /*********************
    * PERFORMANCE SCORE *
@@ -5346,13 +5343,13 @@ static u8 fuzz_one(char** argv) {
      testing in earlier, resumed runs (passed_det). */
 
   if (skip_deterministic || queue_cur->was_fuzzed || queue_cur->passed_det)
-    goto tree_stage;
+    goto havoc_stage;
 
   /* Skip deterministic fuzzing if exec path checksum puts this out of scope
      for this master instance. */
 
   if (master_max && (queue_cur->exec_cksum % master_max) != master_id - 1)
-    goto tree_stage;
+    goto havoc_stage;
 
   doing_det = 1;
 
@@ -5950,7 +5947,7 @@ skip_bitflip:
   stage_cycles[STAGE_ARITH32] += stage_max;
 
 skip_arith:
-goto skip_interest;
+
   /**********************
    * INTERESTING VALUES *
    **********************/
@@ -6157,15 +6154,14 @@ skip_interest:
   stage_short = "ext_UO";
   stage_cur   = 0;
   stage_max   = extras_cnt * len;
-  int k;
+
   stage_val_type = STAGE_VAL_NONE;
 
   orig_hit_cnt = new_hit_cnt;
 
-  ex_tmp = ck_alloc(len + MAX_DICT_FILE);
-  u8 cur_byte, next_byte;
+  for (i = 0; i < len; i++) {
 
-  for (i = 0; i < len;) {
+    u32 last_len = 0;
 
     stage_cur_byte = i;
 
@@ -6173,15 +6169,6 @@ skip_interest:
        that we don't have to worry about restoring the buffer in
        between writes at a particular offset determined by the outer
        loop. */
-
-    k=i+1;
-    cur_byte= *(u8*)(out_buf + i);
-    next_byte= *(u8*)(out_buf + k);
-    while(k<len && ( isalpha(cur_byte)||isdigit(cur_byte) )&&( isalpha(next_byte)||isdigit(next_byte) )){
-	   stage_max-=extras_cnt;
-	   k++;
-	   next_byte= *(u8*)(out_buf + k);
-    }
 
     for (j = 0; j < extras_cnt; j++) {
 
@@ -6200,26 +6187,20 @@ skip_interest:
 
       }
 
-      /* Insert token */
-      memcpy(ex_tmp + i, extras[j].data, extras[j].len);
+      last_len = extras[j].len;
+      memcpy(out_buf + i, extras[j].data, last_len);
 
-      /* Copy tail */
-      memcpy(ex_tmp + i + extras[j].len, out_buf + k, len -k);
-
-      if (common_fuzz_stuff(argv, ex_tmp, len-k+i + extras[j].len)){
-         ck_free(ex_tmp);
-         goto abandon_entry;
-      }
+      if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
 
       stage_cur++;
 
     }
 
-    /* Copy head */
-    memcpy(ex_tmp+i, out_buf+i, k-i);
-    i=k;
+    /* Restore all the clobbered memory. */
+    memcpy(out_buf + i, in_buf + i, last_len);
+
   }
-  ck_free(ex_tmp);
+
   new_hit_cnt = queued_paths + unique_crashes;
 
   stage_finds[STAGE_EXTRAS_UO]  += new_hit_cnt - orig_hit_cnt;
@@ -6236,18 +6217,9 @@ skip_interest:
 
   ex_tmp = ck_alloc(len + MAX_DICT_FILE);
 
-  for (i = 0; i <= len;) {
+  for (i = 0; i <= len; i++) {
 
     stage_cur_byte = i;
-
-    k=i+1;
-    cur_byte= *(u8*)(out_buf + i);
-    next_byte= *(u8*)(out_buf + k);
-    while(k<len && ( isalpha(cur_byte)||isdigit(cur_byte) )&&( isalpha(next_byte)||isdigit(next_byte) )){
-	    stage_max-=extras_cnt;
-	    k++;
-	    next_byte= *(u8*)(out_buf + k);
-    }
 
     for (j = 0; j < extras_cnt; j++) {
 
@@ -6272,8 +6244,8 @@ skip_interest:
     }
 
     /* Copy head */
-    memcpy(ex_tmp+i, out_buf+i, k-i);
-    i=k;
+    ex_tmp[i] = out_buf[i];
+
   }
 
   ck_free(ex_tmp);
@@ -6296,20 +6268,11 @@ skip_user_extras:
 
   orig_hit_cnt = new_hit_cnt;
 
-  ex_tmp = ck_alloc(len + MAX_DICT_FILE);
+  for (i = 0; i < len; i++) {
 
-  for (i = 0; i < len;) {
+    u32 last_len = 0;
 
     stage_cur_byte = i;
-
-    k=i+1;
-    cur_byte= *(u8*)(out_buf + i);
-    next_byte= *(u8*)(out_buf + k);
-    while(k<len && ( isalpha(cur_byte)||isdigit(cur_byte) )&&( isalpha(next_byte)||isdigit(next_byte) )){
-	   stage_max-=MIN(a_extras_cnt, USE_AUTO_EXTRAS);
-	   k++;
-	   next_byte= *(u8*)(out_buf + k);
-    }
 
     for (j = 0; j < MIN(a_extras_cnt, USE_AUTO_EXTRAS); j++) {
 
@@ -6324,25 +6287,17 @@ skip_user_extras:
 
       }
 
-      /* Insert token */
-      memcpy(ex_tmp + i, a_extras[j].data, a_extras[j].len);
+      last_len = a_extras[j].len;
+      memcpy(out_buf + i, a_extras[j].data, last_len);
 
-      /* Copy tail */
-      memcpy(ex_tmp + i + a_extras[j].len, out_buf + k, len -k);
-
-      if (common_fuzz_stuff(argv, ex_tmp, len-k+i + a_extras[j].len)) {
-        ck_free(ex_tmp);
-        goto abandon_entry;
-      }
-
+      if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
 
       stage_cur++;
 
     }
 
     /* Restore all the clobbered memory. */
-    memcpy(ex_tmp+i, out_buf+i, k-i);
-    i=k;
+    memcpy(out_buf + i, in_buf + i, last_len);
 
   }
 
@@ -6359,72 +6314,10 @@ skip_extras:
 
   if (!queue_cur->passed_det) mark_as_det_done(queue_cur);
 
-tree_stage:
-
-  stage_name  = "tree";
-  stage_short = "tree";
-
-  struct queue_entry* target;
-  u32 tid;
-  u8* new_buf;
-
-retry_external_pick:
-  // Pick a random other queue entry for passing to external API 
-  do { tid = UR(queued_paths); } while (tid == current_entry && queued_paths > 1);
-
-  target = queue;
-
-  while (tid >= 100) { target = target->next_100; tid -= 100; }
-  while (tid--) target = target->next;
-
-  //Make sure that the target has a reasonable length.
-
-  while (target && (target->len < 2 || target == queue_cur) && queued_paths > 1) {
-    target = target->next;
-    splicing_with++;
-  }
-  if (!target) goto retry_external_pick;
-
-  // Read the additional testcase into a new buffer.
-  fd = open(target->fname, O_RDONLY);
-  if (fd < 0) PFATAL("Unable to open '%s'", target->fname);
-  new_buf = ck_alloc_nozero(target->len);
-  ck_read(fd, new_buf, target->len, target->fname);
-  close(fd);
-  stage_max=parse(in_buf,len,new_buf,target->len);
-  ck_free(new_buf);
-
-  orig_hit_cnt =  queued_paths + unique_crashes;
- 
-  for(stage_cur=0;stage_cur<stage_max;stage_cur++){
-     char* retbuf=NULL;
-     size_t retlen=0;
-     fuzz(stage_cur,&retbuf,&retlen);
-     if (retbuf) {
-        if(retlen>0){
-           if (common_fuzz_stuff(argv, retbuf, retlen)) {
-             free(retbuf);
-             goto abandon_entry;
-           }
-        }
-      // Reset retbuf/retlen
-      free(retbuf);
-      retbuf = NULL;
-      retlen = 0;
-    }
-  }
-
-  new_hit_cnt = queued_paths + unique_crashes;
-
-  stage_finds[STAGE_TREE]  += new_hit_cnt - orig_hit_cnt;
-  stage_cycles[STAGE_TREE] += stage_max;
-
   /****************
    * RANDOM HAVOC *
    ****************/
-  //ret_val = 0;
-  //goto abandon_entry;
-  
+
 havoc_stage:
 
   stage_cur_byte = -1;
@@ -8092,18 +7985,6 @@ static void save_cmdline(u32 argc, char** argv) {
 /* Main entry point */
 
 int main(int argc, char** argv) {
-	const rlim_t kStackSize=64L*1024L*1024L;
-	struct rlimit rl;
-	int result=getrlimit(RLIMIT_STACK,&rl);
-	if(result==0){
-		if(rl.rlim_cur<kStackSize){
-			rl.rlim_cur=kStackSize;
-			result=setrlimit(RLIMIT_STACK,&rl);
-			if(result!=0){
-				FATAL("setrlimit returned result != 0.\n");
-			}
-		}
-	}
 
   s32 opt;
   u64 prev_queued = 0;
@@ -8123,7 +8004,7 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
-  while ((opt = getopt(argc, argv, "+zspN:chi:o:a:f:m:t:T:dnCB:S:M:x:Q")) > 0)
+  while ((opt = getopt(argc, argv, "+zspN:chi:o:f:m:t:T:dnCB:S:M:x:Q")) > 0)
 
     switch (opt) {
 
@@ -8164,11 +8045,6 @@ int main(int argc, char** argv) {
 
         if (out_dir) FATAL("Multiple -o options not supported");
         out_dir = optarg;
-        break;
-
-      case 'a': /* cpu */
-
-        if (sscanf(optarg,"%d",&cpu_a)<1) FATAL("Bad syntax for -a");
         break;
 
       case 'M': { /* master sync ID */
