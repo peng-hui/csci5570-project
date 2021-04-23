@@ -18,12 +18,12 @@ csci5570-project
 - See the paper (appendix) for more details.
 
 ## AFL-based Fuzzing
-- See [afl](afl/README.md)
+- See [afl](afl/README.md).
 
 ## Outputs
 - [Project proposal](doc/proposal/p.pdf)
 - [Research report](doc/report/p.pdf)
-- [Demo video]()
+- [Demo video](https://www.bilibili.com/video/BV14K4y1o7nA?share_source=copy_web)
 
 ## Author
 [Penghui Li](https://peng-hui.github.io) <phli@cse.cuhk.edu.hk>
